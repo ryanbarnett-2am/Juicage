@@ -15,7 +15,10 @@ class UsageViewModel: ObservableObject {
     private let forecaster = UsageForecaster()
     private var refreshTimer: Timer?
     private var activityToken: NSObjectProtocol?
-    private let refreshInterval: TimeInterval = 180
+    private var cancellables = Set<AnyCancellable>()
+
+    // Data older than this (with no successful refresh since) is considered stale.
+    private let staleAfter: TimeInterval = 15 * 60
 
     func start() {
         fetcher = UsageFetcher()
@@ -49,10 +52,21 @@ class UsageViewModel: ObservableObject {
             reason: "Periodically checking Claude usage")
 
         // The fetcher does its first fetch automatically once the page loads.
-        // We build the timer by hand and add it in `.common` mode so it keeps
-        // firing even while a menu is open — and isn't limited to the default
-        // run-loop mode that App Nap can suspend.
-        let timer = Timer(timeInterval: refreshInterval, repeats: true) { [weak self] _ in
+        scheduleRefreshTimer()
+
+        // Reschedule if the user changes the refresh interval in Preferences.
+        Preferences.shared.$refreshMinutes
+            .dropFirst()
+            .sink { [weak self] _ in self?.scheduleRefreshTimer() }
+            .store(in: &cancellables)
+    }
+
+    // Builds the refresh timer using the interval from Preferences, and adds it
+    // in `.common` mode so it keeps firing even while a menu is open — and isn't
+    // limited to the default run-loop mode that App Nap can suspend.
+    private func scheduleRefreshTimer() {
+        refreshTimer?.invalidate()
+        let timer = Timer(timeInterval: Preferences.shared.refreshInterval, repeats: true) { [weak self] _ in
             self?.refresh()
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -94,9 +108,14 @@ class UsageViewModel: ObservableObject {
 
     // MARK: - Menu bar helpers
 
-    // The percentage the ring shows — the highest session usage across workspaces.
+    // The outer ring shows the highest session usage across workspaces…
     var ringPercent: Int? {
         workspaces.compactMap { $0.session?.percent }.max()
+    }
+
+    // …and the inner ring shows the highest weekly (all models) usage.
+    var weeklyRingPercent: Int? {
+        workspaces.compactMap { $0.weeklyAll?.percent }.max()
     }
 
     // True if any limit anywhere is on pace to hit its cap — drives ⚠ + red ring.
@@ -106,6 +125,13 @@ class UsageViewModel: ObservableObject {
 
     var lastUpdated: Date? {
         workspaces.compactMap { $0.lastUpdated }.max()
+    }
+
+    // True when we have data but haven't successfully refreshed it in a while —
+    // e.g. offline, logged out, or the API changed. Drives the "stale" cue.
+    var isStale: Bool {
+        guard let last = lastUpdated else { return false }
+        return Date().timeIntervalSince(last) > staleAfter
     }
 
     var lastUpdatedText: String {

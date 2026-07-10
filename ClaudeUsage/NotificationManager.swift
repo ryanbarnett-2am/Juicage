@@ -47,21 +47,23 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         let prefix = (showName ? (workspace.workspaceName.map { "\($0) · " } ?? "") : "")
 
+        let prefs = Preferences.shared
+
         // Percentage thresholds
         let level = metric.percent >= 100 ? 100 : (metric.percent >= 80 ? 80 : 0)
         if level > state.notifiedLevel {
-            if level == 100 {
+            if level == 100, prefs.notifyAt100 {
                 notify(title: "Claude limit reached",
                        body: "\(prefix)\(metric.label) is at 100%.")
-            } else {
+            } else if level == 80, prefs.notifyAt80 {
                 notify(title: "Claude usage high",
                        body: "\(prefix)\(metric.label) is at \(metric.percent)%.")
             }
-            state.notifiedLevel = level
+            state.notifiedLevel = level   // record it even if muted, so we don't backfill later
         }
 
         // Forecast: on pace to hit the limit before it resets
-        if metric.forecast.isAlerting && !state.forecastFired {
+        if prefs.notifyForecast && metric.forecast.isAlerting && !state.forecastFired {
             if case .willHit(let before) = metric.forecast {
                 notify(title: "On pace to hit a limit",
                        body: "\(prefix)\(metric.label): on pace to run out ~\(DateUtils.duration(before)) before it resets.")

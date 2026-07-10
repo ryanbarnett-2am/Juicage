@@ -37,10 +37,15 @@ struct PopoverView: View {
             Divider()
 
             // Footer
-            HStack {
-                Text(viewModel.lastUpdated == nil ? "Not yet loaded" : "Updated \(viewModel.lastUpdatedText)")
+            HStack(spacing: 4) {
+                if viewModel.isStale {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+                Text(footerText)
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(viewModel.isStale ? Color.orange : Color.secondary.opacity(0.6))
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }
                     .font(.caption)
@@ -51,6 +56,12 @@ struct PopoverView: View {
             .padding(.vertical, 10)
         }
         .frame(width: 300)
+    }
+
+    private var footerText: String {
+        if viewModel.lastUpdated == nil { return "Not yet loaded" }
+        if viewModel.isStale { return "Stale — updated \(viewModel.lastUpdatedText)" }
+        return "Updated \(viewModel.lastUpdatedText)"
     }
 
     @ViewBuilder

@@ -6,6 +6,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var loginWindow: NSWindow?
+    private var settingsWindow: NSWindow?
     let viewModel = UsageViewModel()
     private var cancellables = Set<AnyCancellable>()
     private var labelTimer: Timer?
@@ -56,6 +57,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         RunLoop.main.add(timer, forMode: .common)
         labelTimer = timer
 
+        // Redraw the menu bar immediately when the "show percentage" setting changes.
+        Preferences.shared.$showMenuBarText
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateStatusBar() }
+            .store(in: &cancellables)
+
         viewModel.$needsLogin
             .receive(on: RunLoop.main)
             .sink { [weak self] needs in
@@ -92,9 +99,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // The ring is the primary indicator; the outage dot only appears on top
         // of it when Claude itself is having problems.
-        button.title = alert ? "\(title) ⚠" : title
+        if Preferences.shared.showMenuBarText {
+            button.title = alert ? "\(title) ⚠" : title
+        } else {
+            button.title = ""   // ring only (saves menu bar space, e.g. on notched Macs)
+        }
         button.image = ringOrStatusImage(alert: alert)
         button.imagePosition = .imageLeft
+
+        // Dim the whole item when the data hasn't refreshed in a while, so old
+        // numbers don't look live.
+        button.appearsDisabled = viewModel.isStale
     }
 
     // The ring, unless Claude is down — then show the outage dot instead.
@@ -102,7 +117,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !viewModel.claudeStatus.isHealthy {
             return statusDotImage(for: viewModel.claudeStatus)
         }
-        return ProgressRingImage.make(percent: viewModel.ringPercent, alert: alert)
+        return ProgressRingImage.make(session: viewModel.ringPercent,
+                                      weekly: viewModel.weeklyRingPercent,
+                                      alert: alert)
     }
 
     private func statusDotImage(for status: ClaudeStatus) -> NSImage {
@@ -158,6 +175,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         launch.state = LoginItem.isEnabled ? .on : .off
         menu.addItem(launch)
 
+        let prefsItem = NSMenuItem(title: "Preferences…", action: #selector(menuPreferences), keyEquivalent: ",")
+        prefsItem.target = self
+        menu.addItem(prefsItem)
+
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: "Quit ClaudeUsage", action: #selector(menuQuit), keyEquivalent: "q")
@@ -183,6 +204,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func menuToggleLaunchAtLogin() {
         LoginItem.setEnabled(!LoginItem.isEnabled)
+    }
+
+    @objc private func menuPreferences() {
+        if settingsWindow == nil {
+            let hosting = NSHostingController(rootView: SettingsView())
+            let win = NSWindow(contentViewController: hosting)
+            win.title = "ClaudeUsage Preferences"
+            win.styleMask = [.titled, .closable]
+            win.isReleasedWhenClosed = false
+            win.center()
+            settingsWindow = win
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func showLoginWindow() {
