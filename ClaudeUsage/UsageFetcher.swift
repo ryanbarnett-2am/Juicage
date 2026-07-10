@@ -140,7 +140,11 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
             }
 
             if let usageDict = raw["usage"] as? [String: Any] {
-                parseUsage(usageDict, into: &ws)
+                var parsed = UsageParser.parseUsage(usageDict)
+                parsed.workspaceID = ws.workspaceID
+                parsed.workspaceName = ws.workspaceName
+                parsed.lastUpdated = ws.lastUpdated
+                ws = parsed
             }
             // Only keep workspaces that actually have usage to show.
             if ws.session != nil || ws.weeklyAll != nil || !ws.weeklyModels.isEmpty {
@@ -156,89 +160,6 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
 
     deinit {
         reloadTimer?.invalidate()
-    }
-
-    // Fills one workspace's metrics from its usage JSON.
-    private func parseUsage(_ usageDict: [String: Any], into result: inout WorkspaceUsage) {
-        // The "limits" array is claude.ai's canonical usage structure. Each entry
-        // has a `kind` (session / weekly_all / weekly_scoped), a `percent`, a
-        // `resets_at`, and — for per-model caps — a `scope` naming the model.
-        // Reading this array is what makes Fable and other models appear.
-        if let limits = usageDict["limits"] as? [[String: Any]] {
-            for limit in limits {
-                guard let pct = doubleValue(limit["percent"]) else { continue }
-                let percent = Int(pct.rounded())
-                let resetAt = DateUtils.parseISO(limit["resets_at"] as? String)
-                let kind = limit["kind"] as? String ?? ""
-
-                switch kind {
-                case "session":
-                    result.session = UsageMetric(key: "session", label: "Current Session",
-                                                 percent: percent, resetAt: resetAt)
-                case "weekly_all":
-                    result.weeklyAll = UsageMetric(key: "weekly_all", label: "All Models",
-                                                   percent: percent, resetAt: resetAt)
-                case "weekly_scoped":
-                    let name = scopedLabel(limit)
-                    result.weeklyModels.append(
-                        UsageMetric(key: "weekly_scoped:\(name)", label: name,
-                                    percent: percent, resetAt: resetAt))
-                default:
-                    break
-                }
-            }
-        }
-
-        // Fallback for older API shape: if the limits array was missing, read the
-        // top-level five_hour / seven_day objects instead.
-        if result.session == nil, let obj = usageDict["five_hour"] as? [String: Any],
-           let util = doubleValue(obj["utilization"]) {
-            result.session = UsageMetric(key: "session", label: "Current Session",
-                                         percent: Int(util.rounded()),
-                                         resetAt: DateUtils.parseISO(obj["resets_at"] as? String))
-        }
-        if result.weeklyAll == nil, let obj = usageDict["seven_day"] as? [String: Any],
-           let util = doubleValue(obj["utilization"]) {
-            result.weeklyAll = UsageMetric(key: "weekly_all", label: "All Models",
-                                           percent: Int(util.rounded()),
-                                           resetAt: DateUtils.parseISO(obj["resets_at"] as? String))
-        }
-
-        // Extra pay-as-you-go usage lives under "spend" now (older API used
-        // "extra_usage"). Only shown when the user has enabled it.
-        if let spend = usageDict["spend"] as? [String: Any], (spend["enabled"] as? Bool) == true {
-            result.extraEnabled = true
-            if let used = spend["used"] as? [String: Any], let minor = doubleValue(used["amount_minor"]) {
-                let exponent = doubleValue(used["exponent"]) ?? 2
-                result.extraUsedCredits = minor / pow(10, exponent)
-            }
-            result.extraMonthlyLimit = doubleValue(spend["cap"])
-        }
-
-        // Show the per-model bars in a stable order (highest usage first).
-        result.weeklyModels.sort { $0.percent > $1.percent }
-    }
-
-    // Pulls a friendly model name out of a weekly_scoped limit's `scope` object,
-    // e.g. scope.model.display_name -> "Fable".
-    private func scopedLabel(_ limit: [String: Any]) -> String {
-        if let scope = limit["scope"] as? [String: Any] {
-            if let model = scope["model"] as? [String: Any],
-               let name = model["display_name"] as? String, !name.isEmpty {
-                return name
-            }
-            if let surface = scope["surface"] as? String, !surface.isEmpty {
-                return surface.capitalized
-            }
-        }
-        return "Weekly (scoped)"
-    }
-
-    private func doubleValue(_ value: Any?) -> Double? {
-        if let d = value as? Double { return d }
-        if let i = value as? Int { return Double(i) }
-        if let n = value as? NSNumber { return n.doubleValue }
-        return nil
     }
 
     // The script that actually talks to claude.ai's API. Runs inside the logged-in

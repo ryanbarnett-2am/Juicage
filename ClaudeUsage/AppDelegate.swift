@@ -12,6 +12,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        #if DEBUG
+        UsageParser.runSelfTest()
+        #endif
+        NotificationManager.shared.requestAuthorization()
         setupStatusBar()
         setupPopover()
         observeViewModel()

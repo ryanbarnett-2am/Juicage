@@ -80,6 +80,7 @@ class UsageViewModel: ObservableObject {
             updated.weeklyModels = ws.weeklyModels.map { forecasted($0, scope: scope) ?? $0 }
             return updated
         }
+        NotificationManager.shared.evaluate(workspaces)
         isLoading = false
         needsLogin = false
         errorMessage = nil
