@@ -8,8 +8,11 @@ A menu bar app that shows your live claude.ai usage. **macOS 13 (Ventura) or lat
 
 ## Steps
 
-1. **Download** `Tally.zip` and double-click it to unzip.
-2. **Drag `Tally.app` into your Applications folder.**
+1. **Download** `Tally.zip`, then **double-click it**. macOS unzips it and
+   **`Tally.app` appears right next to the zip** (e.g. in your Downloads or on
+   your Desktop). Note: you can't browse *inside* a `.zip` in Finder —
+   double-clicking to extract it is how you open it.
+2. **Drag that `Tally.app` into your Applications folder.**
 3. **First launch needs one extra step** (the app isn't from the App Store):
    - **Right-click** the app → **Open** → **Open**.
    - If macOS still blocks it, open **System Settings → Privacy & Security**,
