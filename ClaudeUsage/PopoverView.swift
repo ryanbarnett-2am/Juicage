@@ -67,8 +67,18 @@ struct PopoverView: View {
     @ViewBuilder
     private var content: some View {
         if viewModel.needsLogin {
-            infoState(icon: "person.crop.circle.badge.exclamationmark",
-                      text: "Sign in to see your usage")
+            VStack(spacing: 10) {
+                Image(systemName: "person.crop.circle.badge.exclamationmark")
+                    .font(.system(size: 30)).foregroundStyle(.secondary)
+                Text("Sign in to see your usage")
+                    .font(.callout).foregroundStyle(.secondary)
+                Button("Sign In") {
+                    NotificationCenter.default.post(name: .openLogin, object: nil)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
 
         } else if viewModel.workspaces.isEmpty, let err = viewModel.errorMessage {
             VStack(spacing: 6) {

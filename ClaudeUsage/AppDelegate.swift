@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var loginWindow: NSWindow?
@@ -21,6 +21,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupPopover()
         observeViewModel()
         viewModel.start()
+
+        // Let the popover's "Sign In" button (re)open the login window.
+        NotificationCenter.default.addObserver(self, selector: #selector(handleOpenLogin),
+                                               name: .openLogin, object: nil)
     }
 
     private func setupStatusBar() {
@@ -221,21 +225,53 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showLoginWindow() {
+        // Become a regular app while signing in: this gives a Dock icon (click it
+        // to bring the window back if it slips behind your browser) and reliable
+        // mouse/keyboard input. We revert to menu-bar-only when done.
+        // NOTE: deliberately NOT a floating window — a WKWebView at an elevated
+        // window level doesn't reliably receive clicks.
+        NSApp.setActivationPolicy(.regular)
+
         if loginWindow == nil {
             let view = LoginView(onLoggedIn: { [weak self] in
-                self?.loginWindow?.orderOut(nil)
-                self?.loginWindow = nil
-                self?.viewModel.loggedIn()
+                self?.finishLogin()
             })
             let hosting = NSHostingController(rootView: view)
             let win = NSWindow(contentViewController: hosting)
             win.title = "Sign in to Claude"
-            win.styleMask = [.titled, .closable]
-            win.setContentSize(NSSize(width: 480, height: 600))
+            win.styleMask = [.titled, .closable, .resizable]
+            win.setContentSize(NSSize(width: 480, height: 640))
+            win.isReleasedWhenClosed = false
+            win.delegate = self
             win.center()
             loginWindow = win
         }
         loginWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
+
+    private func finishLogin() {
+        loginWindow?.orderOut(nil)
+        loginWindow = nil
+        NSApp.setActivationPolicy(.accessory)   // back to menu-bar-only
+        viewModel.loggedIn()
+    }
+
+    @objc private func handleOpenLogin() {
+        showLoginWindow()
+    }
+
+    // If the user closes the sign-in window without finishing, revert to
+    // menu-bar-only so we don't leave a stray Dock icon behind.
+    func windowWillClose(_ notification: Notification) {
+        if (notification.object as AnyObject) === loginWindow {
+            loginWindow = nil
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+}
+
+extension Notification.Name {
+    // Posted by the popover's "Sign In" button to (re)open the login window.
+    static let openLogin = Notification.Name("TallyOpenLogin")
 }
