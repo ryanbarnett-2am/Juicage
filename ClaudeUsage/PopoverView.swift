@@ -8,7 +8,7 @@ struct PopoverView: View {
 
             // Header
             HStack {
-                Text("Claude Usage").font(.headline)
+                Text("Tally").font(.headline)
                 Spacer()
                 if viewModel.isLoading {
                     ProgressView().scaleEffect(0.6)

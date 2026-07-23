@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import AppKit
 
 class UsageViewModel: ObservableObject {
     // One entry per workspace the login belongs to (personal, work, …).
@@ -14,6 +15,8 @@ class UsageViewModel: ObservableObject {
     private var statusChecker: StatusChecker!
     private let forecaster = UsageForecaster()
     private var refreshTimer: Timer?
+    private var fetchWatchdog: Timer?
+    private var wakeObserver: Any?
     private var activityToken: NSObjectProtocol?
     private var cancellables = Set<AnyCancellable>()
 
@@ -59,6 +62,13 @@ class UsageViewModel: ObservableObject {
             .dropFirst()
             .sink { [weak self] _ in self?.scheduleRefreshTimer() }
             .store(in: &cancellables)
+
+        // After the Mac wakes from sleep, refresh right away — that's when the
+        // parked page most often needs recovering.
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.refresh()
+        }
     }
 
     // Builds the refresh timer using the interval from Preferences, and adds it
@@ -76,6 +86,19 @@ class UsageViewModel: ObservableObject {
     func refresh() {
         isLoading = true
         fetcher.fetch()
+
+        // Safety net: never let the spinner hang. If nothing comes back in 25s,
+        // stop loading so the "stale" cue shows and the next cycle can retry.
+        fetchWatchdog?.invalidate()
+        let watchdog = Timer(timeInterval: 25, repeats: false) { [weak self] _ in
+            guard let self, self.isLoading else { return }
+            self.isLoading = false
+            if self.workspaces.isEmpty && self.errorMessage == nil {
+                self.errorMessage = "No response from claude.ai — will retry."
+            }
+        }
+        RunLoop.main.add(watchdog, forMode: .common)
+        fetchWatchdog = watchdog
     }
 
     func loggedIn() {
@@ -143,6 +166,10 @@ class UsageViewModel: ObservableObject {
 
     deinit {
         refreshTimer?.invalidate()
+        fetchWatchdog?.invalidate()
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+        }
         if let token = activityToken {
             ProcessInfo.processInfo.endActivity(token)
         }

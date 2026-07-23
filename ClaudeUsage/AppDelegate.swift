@@ -181,7 +181,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "Quit ClaudeUsage", action: #selector(menuQuit), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit Tally", action: #selector(menuQuit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 
@@ -210,7 +210,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsWindow == nil {
             let hosting = NSHostingController(rootView: SettingsView())
             let win = NSWindow(contentViewController: hosting)
-            win.title = "ClaudeUsage Preferences"
+            win.title = "Tally Preferences"
             win.styleMask = [.titled, .closable]
             win.isReleasedWhenClosed = false
             win.center()

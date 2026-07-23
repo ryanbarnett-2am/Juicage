@@ -19,6 +19,7 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
     var onError: ((String) -> Void)?
 
     private var pageReady = false
+    private var isReloading = false
     private var reloadTimer: Timer?
 
     override init() {
@@ -59,18 +60,20 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
         // fresh over long uptimes. Added in `.common` mode for the same reason
         // as the refresh timer.
         let reload = Timer(timeInterval: 1800, repeats: true) { [weak self] _ in
-            self?.pageReady = false
-            self?.webView.reload()
+            self?.reloadPage()
         }
         RunLoop.main.add(reload, forMode: .common)
         reloadTimer = reload
     }
 
     // Called every 3 minutes by the view model. If the page is parked and ready,
-    // just re-run the API call — no page reload needed.
+    // re-run the API call. If the page got into a not-ready state (e.g. an
+    // interrupted reload after the Mac slept), reload it to recover instead of
+    // silently doing nothing — otherwise a refresh would hang forever.
     func fetch() {
         guard pageReady else {
-            dlog("fetch() skipped — page not ready yet")
+            dlog("fetch() called while page not ready — reloading to recover")
+            reloadPage()
             return
         }
         dlog("fetch() firing on \(webView.url?.absoluteString ?? "nil")")
@@ -81,10 +84,19 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
         }
     }
 
+    // Reloads the parked page (used by the 30-min timer and by fetch() recovery).
+    private func reloadPage() {
+        guard !isReloading else { return }
+        isReloading = true
+        pageReady = false
+        webView.reload()
+    }
+
     // MARK: - WKNavigationDelegate
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         pageReady = true
+        isReloading = false
         // Small delay so cookies/session are settled, then do the first fetch.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.fetch()
@@ -92,10 +104,12 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        isReloading = false
         onError?(error.localizedDescription)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        isReloading = false
         onError?(error.localizedDescription)
     }
 

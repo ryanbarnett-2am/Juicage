@@ -1,14 +1,18 @@
-# ClaudeUsage
+# Tally
 
-A lightweight macOS **menu bar app** that shows your live [claude.ai](https://claude.ai)
-usage at a glance — session, weekly, and per-model limits — with a colored ring
-that fills as you go and a forecast of whether you're on pace to hit a limit.
-No dock icon; it runs quietly in the background and refreshes on its own.
+**A usage meter for [Claude.ai](https://claude.ai).**
 
-> **Unofficial.** This project is not affiliated with, endorsed by, or supported
-> by Anthropic. It reads usage data from claude.ai's own web session using an
-> **undocumented internal API**, which can change or stop working at any time.
-> Use at your own discretion and in line with Anthropic's Terms of Service.
+A lightweight macOS **menu bar app** that shows your live Claude.ai usage at a
+glance — session, weekly, and per-model limits — with a colored ring that fills
+as you go and a forecast of whether you're on pace to hit a limit. No dock icon;
+it runs quietly in the background and refreshes on its own.
+
+> **Unofficial.** Tally is not affiliated with, endorsed by, or supported by
+> Anthropic. "Claude" is a trademark of Anthropic; it's used here only to
+> describe what the app works with. Tally reads usage data from claude.ai's own
+> web session using an **undocumented internal API**, which can change or stop
+> working at any time. Use at your own discretion and in line with Anthropic's
+> Terms of Service.
 
 ## Features
 
@@ -41,10 +45,14 @@ structured data the settings page uses.
 
 Requires **Xcode** (macOS 13 Ventura or later).
 
-1. Open `ClaudeUsage.xcodeproj` in Xcode.
+1. Open `ClaudeUsage.xcodeproj` in Xcode. *(The Xcode project keeps its original
+   codename; the app it builds is **Tally**.)*
 2. Press **⌘R** to build and run.
 3. The first launch shows a sign-in window — log into claude.ai once. Your login
    is remembered after that.
+
+To build a shareable copy, run `./package-release.sh` — it produces `Tally.zip`
+on your Desktop.
 
 The app is signed to run locally (ad-hoc), so if you move a built copy to
 another Mac you may need to right-click → **Open** the first time to get past
@@ -52,9 +60,9 @@ Gatekeeper.
 
 ## Privacy
 
-ClaudeUsage talks only to `claude.ai` and `status.claude.com`. Your login lives
-in the app's own web-view cookie store on your Mac — **no API keys or credentials
-are stored in the code**, and nothing is sent to any third party.
+Tally talks only to `claude.ai` and `status.claude.com`. Your login lives in the
+app's own web-view cookie store on your Mac — **no API keys or credentials are
+stored in the code**, and nothing is sent to any third party.
 
 ## A note on reliability
 

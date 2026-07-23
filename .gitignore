@@ -16,6 +16,9 @@ xcuserdata/
 .build/
 Packages/
 
+# Release packaging output (from package-release.sh)
+.release-build/
+
 # Misc
 *.moved-aside
 *.hmap
