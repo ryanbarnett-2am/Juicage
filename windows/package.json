@@ -1,0 +1,15 @@
+{
+  "name": "tally",
+  "productName": "Tally",
+  "version": "0.1.0",
+  "description": "Usage meter for Claude.ai — unofficial Windows tray app",
+  "author": "Ryan Barnett",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^43.2.0"
+  }
+}

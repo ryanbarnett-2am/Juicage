@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Claude-flavored palette: warm neutrals + coral accent */
+  :root {
+    --bg: #262624;
+    --card: #31302e;
+    --text: #f5f4ee;
+    --dim: #b3b0a7;
+    --track: #46443f;
+    --accent: #d97757;
+    --warn: #e08c00;
+    --bad: #d93036;
+    --border: #3d3b37;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f4ef;
+      --card: #ffffff;
+      --text: #3d3929;
+      --dim: #85816f;
+      --track: #e8e6dd;
+      --accent: #c96442;
+      --warn: #c77b00;
+      --bad: #c62a30;
+      --border: #e5e3da;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    padding: 14px;
+    user-select: none;
+    overflow-y: auto;
+  }
+  h1 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h1::before {
+    content: '';
+    width: 12px; height: 12px;
+    border: 2.5px solid var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .ws {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 14px;
+    margin-bottom: 10px;
+  }
+  .ws-name { font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .ws-name .tag {
+    color: var(--accent); font-weight: 500; font-size: 11px;
+    border: 1px solid var(--accent); border-radius: 99px; padding: 1px 8px;
+  }
+  .row { margin-bottom: 10px; }
+  .row:last-child { margin-bottom: 2px; }
+  .row-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .row-label { color: var(--dim); }
+  .row-val { font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width .3s; }
+  .bar-fill.warn { background: var(--warn); }
+  .bar-fill.bad { background: var(--bad); }
+  .extra { color: var(--dim); font-size: 12px; margin-top: 8px; }
+  .error { color: var(--warn); user-select: text; margin: 8px 0; word-break: break-word; }
+  .center { text-align: center; padding: 26px 10px; color: var(--dim); }
+  .footer {
+    display: flex; gap: 6px; align-items: center;
+    margin-top: 2px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .footer .updated { color: var(--dim); font-size: 11px; flex: 1; }
+  button {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 11px; font-size: 12px; cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: var(--card); border-color: var(--dim); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.08); }
+</style>
+</head>
+<body>
+  <h1>Tally</h1>
+  <div id="content"><div class="center">Loading…</div></div>
+  <div class="footer">
+    <span class="updated" id="updated"></span>
+    <button onclick="window.tally.refresh()">Refresh</button>
+    <button onclick="window.tally.openSite()">claude.ai</button>
+    <button onclick="window.tally.quit()">Quit</button>
+  </div>
+<script>
+  let data = null
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  }
+
+  function countdown(resetsAt) {
+    if (!resetsAt) return ''
+    const ms = new Date(resetsAt).getTime() - Date.now()
+    if (isNaN(ms) || ms <= 0) return 'resetting…'
+    const s = Math.floor(ms / 1000)
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60)
+    if (d > 0) {
+      const date = new Date(resetsAt)
+      return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+    }
+    return h > 0 ? h + 'h ' + m + 'm' : m + 'm'
+  }
+
+  function barClass(pct) { return pct >= 80 ? 'bad' : pct >= 60 ? 'warn' : '' }
+
+  function barRow(label, m) {
+    if (!m) return ''
+    const pct = Math.round(m.pct)
+    const cd = countdown(m.resetsAt)
+    return '<div class="row">' +
+      '<div class="row-top"><span class="row-label">' + esc(label) + '</span>' +
+      '<span class="row-val">' + pct + '%' + (cd ? ' · resets ' + esc(cd) : '') + '</span></div>' +
+      '<div class="bar"><div class="bar-fill ' + barClass(pct) + '" style="width:' + pct + '%"></div></div>' +
+      '</div>'
+  }
+
+  function render() {
+    const el = document.getElementById('content')
+    if (!data) { el.innerHTML = '<div class="center">Loading…</div>'; fit(); return }
+
+    if (data.state === 'login') {
+      el.innerHTML = '<div class="center">Not signed in to claude.ai<br><br>' +
+        '<button class="primary" onclick="window.tally.signIn()">Sign in to Claude…</button></div>'
+    } else if (data.state === 'error' && !data.workspaces.length) {
+      el.innerHTML = '<div class="center">Couldn\'t load usage</div>' +
+        '<div class="error">' + esc(data.error || '') + '</div>'
+    } else if (!data.workspaces.length) {
+      el.innerHTML = '<div class="center">Loading…</div>'
+    } else {
+      let html = ''
+      for (const w of data.workspaces) {
+        html += '<div class="ws"><div class="ws-name">' + esc(w.name) +
+          (w.isTeam ? '<span class="tag">Team</span>' : '') + '</div>'
+        if (w.error) html += '<div class="error">' + esc(w.error) + '</div>'
+        html += barRow('Session', w.session)
+        html += barRow('Weekly (all models)', w.weekly)
+        for (const pm of (w.perModel || [])) {
+          html += barRow('Weekly (' + pm.label + ')', pm)
+        }
+        if (w.extra) {
+          html += '<div class="extra">Extra usage: $' + (w.extra.used / 100).toFixed(2) +
+            ' of $' + (w.extra.limit / 100).toFixed(2) + '</div>'
+        }
+        html += '</div>'
+      }
+      if (data.error) html += '<div class="error">' + esc(data.error) + '</div>'
+      el.innerHTML = html
+    }
+
+    document.getElementById('updated').textContent = data.updatedAt
+      ? 'Updated ' + new Date(data.updatedAt).toLocaleTimeString()
+      : ''
+    fit()
+  }
+
+  function fit() {
+    // body height is its natural content height (the viewport's scrollHeight
+    // would never report smaller than the window, so the popover couldn't shrink)
+    requestAnimationFrame(() => {
+      const h = Math.ceil(document.body.getBoundingClientRect().height) + 2
+      window.tally.resize(h)
+    })
+  }
+
+  window.tally.onUsage(d => { data = d; render() })
+  window.tally.requestUsage()
+  setInterval(render, 30000)
+</script>
+</body>
+</html>
