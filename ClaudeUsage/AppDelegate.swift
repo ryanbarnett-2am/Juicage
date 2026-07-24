@@ -95,10 +95,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             title = s
         } else {
-            // Multiple accounts: show each session % (ring reflects the worst;
-            // the popover has the per-account detail).
+            // Multiple accounts: show each session %, then the countdown for
+            // whichever session is highest — the one the ring reflects — so time
+            // left stays visible instead of being dropped.
             let parts = workspaces.map { ws in ws.session.map { "\($0.percent)%" } ?? "—" }
-            title = " " + parts.joined(separator: " · ")
+            var s = " " + parts.joined(separator: " · ")
+            if let busiest = workspaces.compactMap({ $0.session })
+                .max(by: { $0.percent < $1.percent }),
+               let reset = busiest.resetAt, reset.timeIntervalSinceNow > 0 {
+                s += " · \(DateUtils.shortCountdown(to: reset))"
+            }
+            title = s
         }
 
         // The ring is the primary indicator; the outage dot only appears on top

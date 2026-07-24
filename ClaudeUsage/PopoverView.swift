@@ -174,7 +174,9 @@ struct UsageRowView: View {
         return .accentColor
     }
 
-    private var subtitle: String? {
+    // The pace forecast, when it has something to say. Shown *in addition to*
+    // the reset line — never instead of it.
+    private var forecastLine: String? {
         switch metric.forecast {
         case .atLimit:
             return "At limit"
@@ -183,13 +185,18 @@ struct UsageRowView: View {
             return "On pace to hit limit ~\(DateUtils.duration(before)) early"
         case .safe(_, let spare):
             // Ahead of pace: show the time margin, unless it's huge (comfortably
-            // safe) or unknown (idle) — then just show the reset time.
+            // safe) or unknown (idle).
             if let spare, spare <= 48 * 3600 {
                 return "On pace with ~\(DateUtils.duration(spare)) to spare"
             }
+            return nil
         case .unknown:
-            break
+            return nil
         }
+    }
+
+    // Time left / reset time — always shown when we know it.
+    private var resetLine: String? {
         guard let reset = metric.resetAt else { return nil }
         switch resetStyle {
         case .countdown: return "Resets in \(DateUtils.mediumCountdown(to: reset))"
@@ -221,10 +228,15 @@ struct UsageRowView: View {
             }
             .frame(height: 8)
 
-            if let subtitle {
-                Text(subtitle)
+            if let forecastLine {
+                Text(forecastLine)
                     .font(.caption2)
                     .foregroundStyle(metric.forecast.isAlerting ? barColor : Color.secondary.opacity(0.7))
+            }
+            if let resetLine {
+                Text(resetLine)
+                    .font(.caption2)
+                    .foregroundStyle(Color.secondary.opacity(0.7))
             }
         }
     }
