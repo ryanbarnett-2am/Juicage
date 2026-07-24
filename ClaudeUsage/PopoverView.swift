@@ -141,7 +141,9 @@ struct WorkspaceSection: View {
             }
 
             if workspace.extraEnabled {
-                ExtraUsageRow(used: workspace.extraUsedCredits, limit: workspace.extraMonthlyLimit)
+                ExtraUsageRow(used: workspace.extraUsedCredits,
+                              limit: workspace.extraMonthlyLimit,
+                              currency: workspace.extraCurrency)
             }
 
             if let error = workspace.error {
@@ -184,10 +186,19 @@ struct UsageRowView: View {
             // Behind pace: you run out this much time before the reset.
             return "On pace to hit limit ~\(DateUtils.duration(before)) early"
         case .safe(_, let spare):
-            // Ahead of pace: show the time margin, unless it's huge (comfortably
-            // safe) or unknown (idle).
-            if let spare, spare <= 48 * 3600 {
-                return "On pace with ~\(DateUtils.duration(spare)) to spare"
+            // Ahead of pace: only worth saying when the margin is meaningful.
+            //
+            // Right after launch the forecaster has a single sample, so it falls
+            // back to "average pace since the window opened" — which at low usage
+            // yields absurd headroom (e.g. "44h to spare" on a 5-hour session).
+            // Requiring the spare time to fit within the time remaining keeps that
+            // launch-time noise out; it resolves itself once real usage gives the
+            // forecaster a measurable rate.
+            if let spare, let reset = metric.resetAt {
+                let timeLeft = reset.timeIntervalSinceNow
+                if timeLeft > 0, spare <= timeLeft {
+                    return "On pace with ~\(DateUtils.duration(spare)) to spare"
+                }
             }
             return nil
         case .unknown:
@@ -247,17 +258,33 @@ struct UsageRowView: View {
 struct ExtraUsageRow: View {
     let used: Double?
     let limit: Double?
+    let currency: String?
 
     var body: some View {
-        HStack {
+        HStack(alignment: .firstTextBaseline) {
             Text("Extra usage").font(.caption).foregroundStyle(.secondary)
             Spacer()
             if let used {
-                let limitStr = limit.map { " / \(Int($0))" } ?? ""
-                Text("\(Int(used))\(limitStr) credits")
+                Text(summary(used))
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
             }
         }
+    }
+
+    // "$0.12 of $5.00 · $4.88 left" — or just the spend if there's no cap.
+    private func summary(_ used: Double) -> String {
+        guard let limit, limit > 0 else { return money(used) }
+        let left = max(0, limit - used)
+        return "\(money(used)) of \(money(limit)) · \(money(left)) left"
+    }
+
+    private func money(_ value: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.currencyCode = currency ?? "USD"
+        f.minimumFractionDigits = 2
+        f.maximumFractionDigits = 2
+        return f.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
     }
 }
 

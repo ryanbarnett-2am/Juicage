@@ -31,8 +31,9 @@ struct WorkspaceUsage: Equatable, Identifiable {
     var weeklyAll: UsageMetric?        // the weekly "All models"
     var weeklyModels: [UsageMetric]    // per-model weekly caps (Fable, etc.)
     var extraEnabled: Bool
-    var extraUsedCredits: Double?
-    var extraMonthlyLimit: Double?
+    var extraUsedCredits: Double?      // money spent, in major units (e.g. dollars)
+    var extraMonthlyLimit: Double?     // your personal spend cap, when the API gives one
+    var extraCurrency: String?         // e.g. "USD"
     var lastUpdated: Date?
     var error: String?
 
@@ -47,6 +48,7 @@ struct WorkspaceUsage: Equatable, Identifiable {
         extraEnabled = false
         extraUsedCredits = nil
         extraMonthlyLimit = nil
+        extraCurrency = nil
         lastUpdated = nil
         error = nil
     }

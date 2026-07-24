@@ -57,11 +57,18 @@ enum UsageParser {
         // "extra_usage"). Only shown when the user has enabled it.
         if let spend = usageDict["spend"] as? [String: Any], (spend["enabled"] as? Bool) == true {
             result.extraEnabled = true
-            if let used = spend["used"] as? [String: Any], let minor = doubleValue(used["amount_minor"]) {
-                let exponent = doubleValue(used["exponent"]) ?? 2
-                result.extraUsedCredits = minor / pow(10, exponent)
+            result.extraUsedCredits = money(spend["used"])
+            // The personal cap appears as `limit` on some accounts and `cap` on
+            // others, and may be a plain number or a money object — try both.
+            result.extraMonthlyLimit = money(spend["limit"]) ?? money(spend["cap"])
+            result.extraCurrency = (spend["used"] as? [String: Any])?["currency"] as? String
+
+            // Temporary: log the raw block so we can confirm the exact shape on an
+            // account that actually has spend enabled.
+            if let json = try? JSONSerialization.data(withJSONObject: spend),
+               let str = String(data: json, encoding: .utf8) {
+                dlog("spend block: \(str)")
             }
-            result.extraMonthlyLimit = doubleValue(spend["cap"])
         }
 
         // Show the per-model bars in a stable order (highest usage first).
@@ -82,6 +89,17 @@ enum UsageParser {
             }
         }
         return "Weekly (scoped)"
+    }
+
+    // claude.ai returns money either as a plain number or as an object like
+    // { "currency": "USD", "amount_minor": 12, "exponent": 2 }  →  $0.12.
+    // Returns the amount in major units (dollars), handling both shapes.
+    static func money(_ value: Any?) -> Double? {
+        if let d = doubleValue(value) { return d }
+        guard let obj = value as? [String: Any],
+              let minor = doubleValue(obj["amount_minor"]) else { return nil }
+        let exponent = doubleValue(obj["exponent"]) ?? 2
+        return minor / pow(10, exponent)
     }
 
     static func doubleValue(_ value: Any?) -> Double? {
