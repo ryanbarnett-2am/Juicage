@@ -10,7 +10,7 @@ XCODEBUILD="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
 
 BUILD="./.release-build"
 APP="$BUILD/Build/Products/Release/Tally.app"
-ZIP="$HOME/Desktop/Tally.zip"
+# ZIP name is set after the build, so it can carry the app's version number.
 
 echo "Building Release…"
 rm -rf "$BUILD"
@@ -28,6 +28,12 @@ rm -rf "$BUILD"
   build >/dev/null
 
 echo "Packaging…"
+# Name the zip after the app's actual version, so a downloaded file identifies
+# itself (Tally-1.2.zip) instead of every release being a generic "Tally.zip".
+ABS_APP="$(cd "$(dirname "$APP")" && pwd)/Tally.app"
+VERSION="$(defaults read "$ABS_APP/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo dev)"
+ZIP="$HOME/Desktop/Tally-$VERSION.zip"
+
 rm -f "$ZIP"
 # Strip any quarantine flag before zipping so we don't ship it to recipients.
 xattr -cr "$APP" 2>/dev/null || true
