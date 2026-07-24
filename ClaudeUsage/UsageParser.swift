@@ -58,9 +58,12 @@ enum UsageParser {
         if let spend = usageDict["spend"] as? [String: Any], (spend["enabled"] as? Bool) == true {
             result.extraEnabled = true
             result.extraUsedCredits = money(spend["used"])
-            // The personal cap appears as `limit` on some accounts and `cap` on
-            // others, and may be a plain number or a money object — try both.
-            result.extraMonthlyLimit = money(spend["limit"]) ?? money(spend["cap"])
+            // The cap appears as `limit` (a money object) on some accounts, and on
+            // others as a nested `cap: { money: …, credits: … }`. Try each shape.
+            let cap = spend["cap"] as? [String: Any]
+            result.extraMonthlyLimit = money(spend["limit"])
+                ?? money(cap?["money"])
+                ?? money(cap?["credits"])
             result.extraCurrency = (spend["used"] as? [String: Any])?["currency"] as? String
 
             // Temporary: log the raw block so we can confirm the exact shape on an

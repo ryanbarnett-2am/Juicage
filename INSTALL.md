@@ -17,20 +17,25 @@ A menu bar app that shows your live claude.ai usage. **macOS 13 (Ventura) or lat
    next to the zip** (you can't browse *inside* a `.zip` in Finder — double-clicking
    to extract it is how you open it).
 3. **Drag that `Tally.app` into your Applications folder.**
-4. **First launch needs one extra step** (the app isn't from the App Store):
-   - **Right-click** the app → **Open** → **Open**.
-   - If macOS still blocks it, open **System Settings → Privacy & Security**,
-     scroll down to *"Tally was blocked…"* and click **Open Anyway**, then
-     open the app again.
-5. If you ever see *"Tally is damaged and can't be opened,"* it's just the
-   download-quarantine flag. Open **Terminal** and run:
+4. **First launch — don't double-click it.** Because this app isn't distributed
+   through the App Store, macOS will refuse a normal double-click. Instead:
+   - **Right-click** (or Control-click) `Tally.app` → choose **Open** →
+     then click **Open** in the dialog that appears.
+   - You only have to do this **once**. After that it opens normally.
+5. **If macOS still blocks it**, open **System Settings → Privacy & Security**,
+   scroll down until you see *"Tally was blocked from use…"*, click
+   **Open Anyway**, then open the app again.
+6. **If it says "Tally is damaged and can't be opened"** — it isn't damaged,
+   that's just macOS's download flag. Open the **Terminal** app and paste this,
+   then press Return:
    ```
    xattr -dr com.apple.quarantine /Applications/Tally.app
    ```
-   then open the app again.
-6. **Sign in** to claude.ai once in the window that appears. Your login is
+   Then open Tally again. (This is safe — it only clears the "downloaded from
+   the internet" marker.)
+7. **Sign in** to claude.ai once in the window that appears. Your login is
    remembered after that.
-7. A **ring** appears in your menu bar — outer = session, inner = weekly.
+8. A **ring** appears in your menu bar — outer = session, inner = weekly.
    - **Left-click** it for the detail popover.
    - **Right-click** it for Refresh, Preferences, Launch at Login, and Quit.
 

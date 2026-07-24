@@ -5,6 +5,7 @@ import Foundation
 func dlog(_ message: @autoclosure () -> String) {
     #if DEBUG
     print("[ClaudeUsage] \(message())")
+    fflush(stdout)   // flush so output reaches a redirected log file immediately
     #endif
 }
 
