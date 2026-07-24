@@ -7,9 +7,42 @@
   "license": "MIT",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.2amideas.tally",
+    "productName": "Tally",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "popover.html",
+      "icon.html",
+      "assets/**"
+    ],
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Tally-Setup-${version}-${arch}.${ext}"
+    }
   },
   "devDependencies": {
-    "electron": "^43.2.0"
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
   }
 }
