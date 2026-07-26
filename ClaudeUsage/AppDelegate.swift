@@ -115,7 +115,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             button.title = ""   // ring only (saves menu bar space, e.g. on notched Macs)
         }
-        button.image = ringOrStatusImage(alert: alert)
+        button.image = ringOrStatusImage()
         button.imagePosition = .imageLeft
 
         // Dim the whole item when the data hasn't refreshed in a while, so old
@@ -124,13 +124,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     // The ring, unless Claude is down — then show the outage dot instead.
-    private func ringOrStatusImage(alert: Bool) -> NSImage {
+    private func ringOrStatusImage() -> NSImage {
         if !viewModel.claudeStatus.isHealthy {
             return statusDotImage(for: viewModel.claudeStatus)
         }
         return ProgressRingImage.make(session: viewModel.ringPercent,
+                                      sessionSeverity: viewModel.sessionSeverity,
                                       weekly: viewModel.weeklyRingPercent,
-                                      alert: alert)
+                                      weeklySeverity: viewModel.weeklySeverity)
     }
 
     private func statusDotImage(for status: ClaudeStatus) -> NSImage {

@@ -165,15 +165,11 @@ struct UsageRowView: View {
     let resetStyle: ResetStyle
 
     private var barColor: Color {
-        switch metric.forecast {
-        case .atLimit:  return .red
-        case .willHit:  return .red
-        case .safe(let projected, _) where projected >= 90: return .orange
-        default: break
+        switch severity(percent: metric.percent, forecast: metric.forecast) {
+        case .ok:     return .accentColor
+        case .warn:   return .orange
+        case .danger: return .red
         }
-        if metric.percent >= 85 { return .red }
-        if metric.percent >= 65 { return .orange }
-        return .accentColor
     }
 
     // The pace forecast, when it has something to say. Shown *in addition to*

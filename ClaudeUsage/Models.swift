@@ -85,6 +85,28 @@ enum ForecastVerdict: Equatable {
     }
 }
 
+// MARK: - Severity (the color tier)
+
+// Three tiers so the color eases fine → getting-close → over, instead of jumping
+// straight from blue to red. Drives both the menu bar rings and the popover bars.
+enum Severity: Int, Comparable {
+    case ok = 0     // comfortably on pace  → blue/neutral
+    case warn = 1   // getting close        → orange
+    case danger = 2 // over pace / very high → red
+    static func < (a: Severity, b: Severity) -> Bool { a.rawValue < b.rawValue }
+}
+
+// Combines how much is used with the forecast. The "warn" middle catches both a
+// high raw percentage and a forecast that's on pace but cutting it close.
+func severity(percent: Int?, forecast: ForecastVerdict) -> Severity {
+    if forecast.isAlerting { return .danger }              // will hit / at limit
+    let p = percent ?? 0
+    if p >= 80 { return .danger }
+    if case .safe(let projected, _) = forecast, projected >= 85 { return .warn }
+    if p >= 60 { return .warn }
+    return .ok
+}
+
 // MARK: - Date & label helpers
 
 enum DateUtils {

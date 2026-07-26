@@ -141,9 +141,21 @@ class UsageViewModel: ObservableObject {
         workspaces.compactMap { $0.weeklyAll?.percent }.max()
     }
 
-    // True if any limit anywhere is on pace to hit its cap — drives ⚠ + red ring.
+    // True if any limit anywhere is on pace to hit its cap — drives the ⚠ text.
     var isAnyAlerting: Bool {
         workspaces.contains { ws in ws.allMetrics.contains { $0.forecast.isAlerting } }
+    }
+
+    // Per-ring severity, so the outer (session) and inner (weekly) rings color
+    // independently (and get the orange middle tier), instead of both jumping to
+    // red when only one is in trouble. Takes the worst across workspaces.
+    var sessionSeverity: Severity {
+        workspaces.compactMap { $0.session }
+            .map { severity(percent: $0.percent, forecast: $0.forecast) }.max() ?? .ok
+    }
+    var weeklySeverity: Severity {
+        workspaces.compactMap { $0.weeklyAll }
+            .map { severity(percent: $0.percent, forecast: $0.forecast) }.max() ?? .ok
     }
 
     var lastUpdated: Date? {

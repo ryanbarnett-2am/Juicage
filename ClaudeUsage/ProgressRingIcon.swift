@@ -3,13 +3,14 @@ import AppKit
 // The menu bar icon: two concentric rings that fill clockwise.
 //   • Outer ring = current session usage
 //   • Inner ring = weekly (all models) usage
-// Each ring shifts color independently — orange at 60%, red at 80% — so a glance
-// tells you which limit is getting tight. `alert` forces both red (a forecast
-// says a limit will be hit).
+// Each ring is colored INDEPENDENTLY by its own metric — orange at 60%, red at
+// 80%, or red if that metric's forecast is alerting. So a fine session with a
+// red weekly shows a neutral outer ring and a red inner ring, not both red.
 @MainActor
 enum ProgressRingImage {
 
-    static func make(session: Int?, weekly: Int?, alert: Bool = false) -> NSImage {
+    static func make(session: Int?, sessionSeverity: Severity,
+                     weekly: Int?, weeklySeverity: Severity) -> NSImage {
         let size: CGFloat = 20
         return NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
             guard let ctx = NSGraphicsContext.current?.cgContext else { return true }
@@ -17,10 +18,18 @@ enum ProgressRingImage {
             let lineWidth: CGFloat = 2.0
 
             drawRing(ctx, center: center, radius: 8.0, lineWidth: lineWidth,
-                     percent: session, color: ringColor(session, alert: alert))   // outer = session
+                     percent: session, color: color(for: sessionSeverity))   // outer = session
             drawRing(ctx, center: center, radius: 4.6, lineWidth: lineWidth,
-                     percent: weekly, color: ringColor(weekly, alert: alert))      // inner = weekly
+                     percent: weekly, color: color(for: weeklySeverity))      // inner = weekly
             return true
+        }
+    }
+
+    private static func color(for s: Severity) -> NSColor {
+        switch s {
+        case .ok:     return .labelColor      // neutral (adapts to the menu bar)
+        case .warn:   return .systemOrange
+        case .danger: return .systemRed
         }
     }
 
@@ -44,11 +53,4 @@ enum ProgressRingImage {
         ctx.strokePath()
     }
 
-    private static func ringColor(_ percent: Int?, alert: Bool) -> NSColor {
-        if alert { return .systemRed }
-        guard let p = percent else { return .secondaryLabelColor }
-        if p >= 80 { return .systemRed }
-        if p >= 60 { return .systemOrange }
-        return .labelColor
-    }
 }
