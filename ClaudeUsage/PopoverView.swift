@@ -201,6 +201,10 @@ struct UsageRowView: View {
                 }
             }
             return nil
+        case .warmingUp:
+            // Pace looks steep but too little used to trust — tell the user we're
+            // watching without crying wolf.
+            return "Calculating pace…"
         case .unknown:
             return nil
         }

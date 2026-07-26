@@ -69,7 +69,8 @@ struct WorkspaceUsage: Equatable, Identifiable {
 
 // The result of projecting your current burn rate forward to a limit's reset.
 enum ForecastVerdict: Equatable {
-    case unknown                            // not enough data yet
+    case unknown                            // nothing to say yet (no usage / can't compute)
+    case warmingUp                          // pace looks steep, but too little used to trust — "calculating"
     // 🟢 on pace to finish under 100%. `spareBeforeReset` is how much longer your
     // allowance would last past the reset — your time margin (nil when idle).
     case safe(projectedPercent: Int, spareBeforeReset: TimeInterval?)
@@ -78,8 +79,8 @@ enum ForecastVerdict: Equatable {
 
     var isAlerting: Bool {
         switch self {
-        case .willHit, .atLimit: return true
-        case .unknown, .safe:    return false
+        case .willHit, .atLimit:            return true
+        case .unknown, .warmingUp, .safe:   return false
         }
     }
 }
