@@ -11,8 +11,13 @@ class UsageViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var claudeStatus: ClaudeStatus = .operational
 
+    // Local models (Ollama / LM Studio) working right now — separate from the
+    // claude.ai numbers above, since these have no quota, just a busy/idle state.
+    @Published var localJobs: [LocalJob] = []
+
     private var fetcher: UsageFetcher!
     private var statusChecker: StatusChecker!
+    private let localMonitor = LocalLLMMonitor()
     private let forecaster = UsageForecaster()
     private var refreshTimer: Timer?
     private var fetchWatchdog: Timer?
@@ -48,6 +53,22 @@ class UsageViewModel: ObservableObject {
         }
         statusChecker.start()
 
+        // Local model watcher. Publishes its own list and tells us when a job
+        // ends so we can fire the "finished" notification.
+        localMonitor.onFinished = { [weak self] job in
+            guard let self, Preferences.shared.notifyLocalDone else { return }
+            NotificationManager.shared.localJobFinished(job)
+        }
+        localMonitor.$jobs
+            .receive(on: RunLoop.main)
+            .sink { [weak self] jobs in self?.localJobs = jobs }
+            .store(in: &cancellables)
+        applyLocalPreference(Preferences.shared.watchLocalLLMs)
+        Preferences.shared.$watchLocalLLMs
+            .dropFirst()
+            .sink { [weak self] on in self?.applyLocalPreference(on) }
+            .store(in: &cancellables)
+
         // Ask macOS not to "App Nap" us — otherwise a backgrounded menu bar app
         // gets throttled and the refresh timer can quietly stop firing.
         activityToken = ProcessInfo.processInfo.beginActivity(
@@ -70,6 +91,18 @@ class UsageViewModel: ObservableObject {
             self?.refresh()
         }
     }
+
+    private func applyLocalPreference(_ enabled: Bool) {
+        if enabled {
+            localMonitor.start()
+        } else {
+            localMonitor.stop()
+            localJobs = []
+        }
+    }
+
+    // True while any local model is working — drives the menu bar indicator.
+    var isLocalBusy: Bool { !localJobs.isEmpty }
 
     // Builds the refresh timer using the interval from Preferences, and adds it
     // in `.common` mode so it keeps firing even while a menu is open — and isn't
@@ -179,6 +212,7 @@ class UsageViewModel: ObservableObject {
     deinit {
         refreshTimer?.invalidate()
         fetchWatchdog?.invalidate()
+        localMonitor.stop()
         if let wakeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
         }

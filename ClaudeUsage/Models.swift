@@ -141,6 +141,18 @@ enum DateUtils {
         duration(date.timeIntervalSince(now))
     }
 
+    // Short elapsed time for a running job: "8s" / "1m 12s" / "3h 4m".
+    // Seconds matter here — local generations are often over in well under a
+    // minute, and "0m" would read as nothing happening.
+    static func compactElapsed(_ seconds: TimeInterval) -> String {
+        let secs = max(0, Int(seconds.rounded()))
+        if secs < 60 { return "\(secs)s" }
+        let h = secs / 3600
+        let m = (secs % 3600) / 60
+        if h > 0 { return "\(h)h \(m)m" }
+        return "\(m)m \(secs % 60)s"
+    }
+
     // Formats a plain duration (in seconds) as "3h 56m" / "42m".
     static func duration(_ seconds: TimeInterval) -> String {
         let secs = max(0, Int(seconds.rounded()))

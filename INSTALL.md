@@ -9,11 +9,11 @@ A menu bar app that shows your live claude.ai usage. **macOS 13 (Ventura) or lat
 ## Steps
 
 1. **Get the app from Releases.** On this project's GitHub page, open the
-   **Releases** section (right-hand sidebar) and download **`Tally.zip`** from the
-   latest release's **Assets**.
+   **Releases** section (right-hand sidebar) and download the **`Tally-<version>.zip`** asset (e.g.
+   `Tally-1.3.zip`) from the latest release's **Assets**.
    > ⚠️ Do **not** use the green **Code → Download ZIP** button — that gives you
    > the *source code*, not the app.
-2. **Double-click `Tally.zip`.** macOS unzips it and **`Tally.app` appears right
+2. **Double-click that zip.** macOS unzips it and **`Tally.app` appears right
    next to the zip** (you can't browse *inside* a `.zip` in Finder — double-clicking
    to extract it is how you open it).
 3. **Drag that `Tally.app` into your Applications folder.**
@@ -46,3 +46,6 @@ A menu bar app that shows your live claude.ai usage. **macOS 13 (Ventura) or lat
 - Because it reads claude.ai's own (undocumented) usage data, it may occasionally
   stop working if claude.ai changes that data's format. If usage won't load,
   check for an update.
+- If you run **Ollama** or **LM Studio**, a green dot appears in the menu bar
+  while a local model is generating, and you get a notification when a long job
+  finishes. Turn it off under *Preferences → Local Models*.

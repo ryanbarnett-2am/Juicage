@@ -61,6 +61,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         RunLoop.main.add(timer, forMode: .common)
         labelTimer = timer
 
+        // A local model starting or finishing changes the menu bar dot.
+        viewModel.$localJobs
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateStatusBar() }
+            .store(in: &cancellables)
+
         // Redraw the menu bar immediately when the "show percentage" setting changes.
         Preferences.shared.$showMenuBarText
             .receive(on: RunLoop.main)
@@ -110,10 +116,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         // The ring is the primary indicator; the outage dot only appears on top
         // of it when Claude itself is having problems.
-        if Preferences.shared.showMenuBarText {
-            button.title = alert ? "\(title) ⚠" : title
+        let text = Preferences.shared.showMenuBarText
+            ? (alert ? "\(title) ⚠" : title)
+            : ""                // ring only (saves menu bar space, e.g. on notched Macs)
+
+        // A green dot trails the text while a local model is generating. It's
+        // deliberately separate from the rings: local models have no quota, just
+        // a busy state, so it says "working" and nothing more.
+        if viewModel.isLocalBusy {
+            button.attributedTitle = busyTitle(text)
         } else {
-            button.title = ""   // ring only (saves menu bar space, e.g. on notched Macs)
+            button.title = text
         }
         button.image = ringOrStatusImage()
         button.imagePosition = .imageLeft
@@ -121,6 +134,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Dim the whole item when the data hasn't refreshed in a while, so old
         // numbers don't look live.
         button.appearsDisabled = viewModel.isStale
+    }
+
+    // Menu bar text with a green "busy" dot appended, sized to sit level with
+    // the numbers rather than dominating them.
+    private func busyTitle(_ text: String) -> NSAttributedString {
+        let out = NSMutableAttributedString(string: text.isEmpty ? "" : "\(text) ")
+        out.append(NSAttributedString(string: "●", attributes: [
+            .foregroundColor: NSColor.systemGreen,
+            .font: NSFont.systemFont(ofSize: 9),
+        ]))
+        return out
     }
 
     // The ring, unless Claude is down — then show the outage dot instead.

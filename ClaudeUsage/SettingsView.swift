@@ -23,6 +23,16 @@ struct SettingsView: View {
                 Toggle("Show percentage next to the ring", isOn: $prefs.showMenuBarText)
             }
 
+            Section("Local Models") {
+                Toggle("Watch Ollama and LM Studio", isOn: $prefs.watchLocalLLMs)
+                Toggle("Notify when a local job finishes", isOn: $prefs.notifyLocalDone)
+                    .disabled(!prefs.watchLocalLLMs)
+                Toggle("Show what it's working on", isOn: $prefs.showLocalTitles)
+                    .disabled(!prefs.watchLocalLLMs)
+                Text("Prompt text is only available from LM Studio — Ollama never records it.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+
             Section("General") {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { newValue in
@@ -31,6 +41,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 380, height: 420)
+        .frame(width: 380, height: 520)
     }
 }

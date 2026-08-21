@@ -75,6 +75,23 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         states[key] = state
     }
 
+    // MARK: - Local models
+
+    // Fired when a local generation ends. With a local model the useful moment
+    // is usually the finish — you kick off a long job, walk away, and want to
+    // know it's done. Very short runs aren't worth a banner.
+    func localJobFinished(_ job: LocalJob) {
+        guard authorized else { return }
+        let elapsed = job.elapsed
+        guard elapsed >= 10 else { return }
+
+        var body = "\(job.model) · \(job.engine.rawValue) · took \(DateUtils.compactElapsed(elapsed))"
+        if Preferences.shared.showLocalTitles, let task = job.title {
+            body = "\(task)\n\(body)"
+        }
+        notify(title: "Local model finished", body: body)
+    }
+
     private func notify(title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title

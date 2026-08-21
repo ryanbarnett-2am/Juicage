@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine   // Timer.publish, for the ticking elapsed time on local jobs
 
 struct PopoverView: View {
     @EnvironmentObject var viewModel: UsageViewModel
@@ -33,6 +34,15 @@ struct PopoverView: View {
             content
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
+
+            // Only appears while something is actually running — an idle section
+            // would just be clutter in a popover you open to check a number.
+            if !viewModel.localJobs.isEmpty {
+                Divider()
+                LocalJobsSection(jobs: viewModel.localJobs)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            }
 
             Divider()
 
@@ -247,6 +257,84 @@ struct UsageRowView: View {
             if let resetLine {
                 Text(resetLine)
                     .font(.caption2)
+                    .foregroundStyle(Color.secondary.opacity(0.7))
+            }
+        }
+    }
+}
+
+// MARK: - Local models at work
+
+// One row per local model currently generating. The elapsed time has to tick on
+// its own — nothing else in the popover changes between the 3-minute fetches.
+struct LocalJobsSection: View {
+    let jobs: [LocalJob]
+    @State private var now = Date()
+
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 5) {
+                Image(systemName: "cpu")
+                    .font(.caption2)
+                    .foregroundStyle(.green)
+                Text(jobs.count == 1 ? "Local model working" : "\(jobs.count) local models working")
+                    .font(.caption).fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+            }
+
+            ForEach(jobs) { job in
+                LocalJobRow(job: job, now: now)
+            }
+        }
+        .onReceive(ticker) { now = $0 }
+    }
+}
+
+struct LocalJobRow: View {
+    let job: LocalJob
+    let now: Date
+
+    // Recomputed against the ticking `now` rather than reading job.elapsed, so
+    // SwiftUI actually re-renders each second.
+    private var detail: String {
+        var parts: [String] = []
+        if job.isPreparing { parts.append("reading prompt") }
+        if let rate = job.tokensPerSec, rate > 0 { parts.append("\(Int(rate.rounded())) tok/s") }
+        parts.append(DateUtils.compactElapsed(now.timeIntervalSince(job.startedAt)))
+        return parts.joined(separator: " · ")
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(Color.green)
+                .frame(width: 6, height: 6)
+                .padding(.top, 5)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(job.model)
+                        .font(.callout).fontWeight(.medium)
+                        .lineLimit(1).truncationMode(.middle)
+                    Spacer(minLength: 6)
+                    Text(job.engine.rawValue)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+
+                // Ollama never logs prompt text, so this is LM Studio only.
+                if Preferences.shared.showLocalTitles, let title = job.title {
+                    Text(title)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text(detail)
+                    .font(.caption2).monospacedDigit()
                     .foregroundStyle(Color.secondary.opacity(0.7))
             }
         }

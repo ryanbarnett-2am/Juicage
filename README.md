@@ -3,9 +3,10 @@
 **A usage meter for [Claude.ai](https://claude.ai).**
 
 A lightweight macOS **menu bar app** that shows your live Claude.ai usage at a
-glance — session, weekly, and per-model limits — with a colored ring that fills
-as you go and a forecast of whether you're on pace to hit a limit. No dock icon;
-it runs quietly in the background and refreshes on its own.
+glance — session, weekly, and per-model limits — with colored rings that fill as
+you go and a forecast of whether you're on pace to hit a limit. It also shows
+when a **local** model (Ollama or LM Studio) is working. No dock icon; it runs
+quietly in the background and refreshes on its own.
 
 > **Unofficial.** Tally is not affiliated with, endorsed by, or supported by
 > Anthropic. "Claude" is a trademark of Anthropic; it's used here only to
@@ -16,34 +17,82 @@ it runs quietly in the background and refreshes on its own.
 
 ## Features
 
-- **Menu bar ring** — a progress ring that fills with your current-session
-  usage and turns orange at 60%, red at 80%.
-- **Detail popover** — click the ring for per-workspace bars: current session,
-  weekly (all models), and a bar for each per-model cap (e.g. Fable) that your
-  account has. Shows all workspaces your login belongs to.
-- **Pace forecast** — projects your recent burn rate forward and tells you, in
-  time, whether you're **ahead** ("~3h 40m to spare") or **behind** ("on pace to
-  hit limit ~2h 15m early"). A ⚠ and red ring appear when you're on track to
-  hit a limit before it resets.
-- **Service status** — if claude.ai is having an outage, the ring is replaced by
-  a red/orange dot and a banner names the issue.
-- **Runs quietly** — refreshes every ~3 minutes, survives macOS App Nap, and can
-  launch at login (right-click the ring → *Launch at Login*).
+### Claude.ai usage
+
+- **Menu bar rings** — two concentric rings: outer is the current session, inner
+  is the weekly cap. Each is colored **independently**, so a healthy session
+  alongside a maxed-out week reads as neutral + red instead of both going red.
+- **Three color tiers** — blue (on pace) → orange (getting close) → red (over
+  pace, or very high), so there's a heads-up rather than a jump straight to red.
+- **Detail popover** — per-workspace bars for the current session, the weekly
+  all-models cap, and each per-model cap (e.g. Fable) your account has. Every
+  workspace your login belongs to is shown.
+- **Pace forecast** — projects your average burn rate forward and reports, in
+  time, whether you're **ahead** ("on pace with ~3h 40m to spare") or **behind**
+  ("on pace to hit limit ~2h 15m early"). Early in a window, when there isn't
+  enough usage to project honestly, it says **"Calculating pace…"** instead of
+  guessing — which keeps the first expensive prompt of a session from setting
+  off a false alarm.
+- **Extra usage** — with pay-as-you-go enabled, shows real spend against your
+  cap: "$0.12 of $5.00 · $4.88 left".
+- **Service status** — during a claude.ai outage the rings give way to a
+  red/orange dot and a banner naming the issue.
+
+### Local models (Ollama / LM Studio)
+
+- A **green dot** in the menu bar while a local model is actively generating,
+  and a popover row with the model, engine, elapsed time, and — for Ollama —
+  tokens per second.
+- A **notification when a job finishes**. With local models that's usually the
+  moment that matters: you start a long generation and walk away.
+- For LM Studio, the prompt is shown as a **task title** so you can tell which
+  job is running. Ollama never records prompt text, so it shows the model name.
+- Entirely optional — switch it off in Preferences.
 
 ## How it works
 
-The app keeps a hidden `WKWebView` parked on `claude.ai` and, every few minutes,
-calls the site's own usage API with your logged-in cookies:
+### Claude.ai
+
+A hidden `WKWebView` stays parked on `claude.ai` and, every few minutes, calls
+the site's own usage API with your logged-in cookies:
 
 - `GET /api/organizations` → your workspaces
 - `GET /api/organizations/{id}/usage` → usage JSON per workspace
 
-There's **no HTML scraping and no browser automation** — it just reads the same
+There's **no HTML scraping and no browser automation** — it reads the same
 structured data the settings page uses.
+
+### Local models
+
+Neither engine has an "am I busy" API, and both keep a model resident in memory
+for several minutes after the work finishes — so keying off "a model is loaded"
+would leave the indicator lit all afternoon. Tally uses the one signal each
+engine actually exposes:
+
+- **Ollama** — tails `~/.ollama/logs/server.log`, which brackets every request
+  (`processing task` … `all slots are idle`) and reports generation speed.
+- **LM Studio** — reads `lms ps --json` for a real `idle` / `processingPrompt` /
+  `generating` status, and `lms log stream` for the prompt text.
+
+A GPU-utilization check acts as a backstop, so an engine that gets wedged can't
+pin the indicator on indefinitely.
+
+## Why the app isn't sandboxed
+
+Tally is **not** App Sandboxed, and that's deliberate: the local-model feature
+cannot work inside the sandbox. Reading Ollama's log file and running the `lms`
+CLI are both blocked by it, and neither engine exposes that information over
+HTTP. Sandboxed, all Tally could report is "a model is loaded" — which, as
+above, stays true for minutes after the work ends.
+
+If you'd rather keep the sandbox than have the feature, set
+`ENABLE_APP_SANDBOX = YES` in the project and turn the feature off in
+Preferences. Everything else works unchanged.
 
 ## Build & run
 
-Requires **Xcode** (macOS 13 Ventura or later).
+Requires **Xcode** and **macOS 13 (Ventura) or later**. No Apple Developer
+account is needed — the project signs ad-hoc, so a clean checkout builds as-is.
 
 1. Open `ClaudeUsage.xcodeproj` in Xcode. *(The Xcode project keeps its original
    codename; the app it builds is **Tally**.)*
@@ -51,26 +100,36 @@ Requires **Xcode** (macOS 13 Ventura or later).
 3. The first launch shows a sign-in window — log into claude.ai once. Your login
    is remembered after that.
 
-To build a shareable copy, run `./package-release.sh` — it produces `Tally.zip`
-on your Desktop.
+To build a shareable copy, run `./package-release.sh`, which produces
+`Tally-<version>.zip` on your Desktop.
 
-The app is signed to run locally (ad-hoc), so if you move a built copy to
-another Mac you may need to right-click → **Open** the first time to get past
+Because it's signed ad-hoc rather than with an Apple Developer ID, a built copy
+moved to another Mac needs a one-time right-click → **Open** to get past
 Gatekeeper.
 
 ## Privacy
 
-Tally talks only to `claude.ai` and `status.claude.com`. Your login lives in the
-app's own web-view cookie store on your Mac — **no API keys or credentials are
-stored in the code**, and nothing is sent to any third party.
+Tally talks to `claude.ai` and `status.claude.com`, plus `127.0.0.1` for the
+local model engines. Nothing goes to any third party, and there are **no API
+keys or credentials in the code** — your login lives in the app's own web-view
+cookie store on your Mac.
+
+The local-model feature reads data that never leaves your machine: Ollama's log
+file and LM Studio's CLI output. Be aware that LM Studio's stream includes
+**your prompt text**, which Tally displays as the task title and may include in
+a "finished" notification. It is never stored or transmitted, and *Show what
+it's working on* in Preferences turns it off.
 
 ## A note on reliability
 
 Because it depends on an undocumented API, the numbers can stop loading if
-claude.ai changes how that data is shaped (it has happened before). When that
-occurs the popover shows a "Couldn't load usage" state so you know it's broken
-rather than silently wrong. Fixes usually mean updating the small bit of parsing
-in `UsageFetcher.swift`.
+claude.ai changes the shape of that data (it has happened before). When that
+occurs the popover shows a "Couldn't load usage" state, so you know it's broken
+rather than silently wrong. Fixes usually mean updating the parsing in
+`UsageParser.swift`.
+
+The local-model integrations lean on a log format and a CLI that upstream can
+change as well; if they do, the indicator simply stops appearing.
 
 ## License
 
