@@ -62,8 +62,10 @@ class UsageViewModel: ObservableObject {
 
         // Local model watcher. Publishes its own list and tells us when a job
         // ends so we can fire the "finished" notification.
-        localMonitor.onRunFinished = { [weak self] run in
-            guard let self, Preferences.shared.notifyLocalDone else { return }
+        // Nothing here touches self — both collaborators are singletons — so no
+        // capture is needed and there's no retain cycle to guard against.
+        localMonitor.onRunFinished = { run in
+            guard Preferences.shared.notifyLocalDone else { return }
             NotificationManager.shared.localRunFinished(run)
         }
         localMonitor.$jobs

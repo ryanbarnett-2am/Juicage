@@ -216,13 +216,18 @@ struct UsageRowView: View {
             //
             // Projected percentage is also just more useful — "about 45% by
             // reset" says where you land; hours-of-slack doesn't.
-            if let spare, let reset = metric.resetAt {
-                let timeLeft = reset.timeIntervalSinceNow
-                if timeLeft > 0, spare <= timeLeft {
-                    return "On pace — about \(projected)% by reset · ~\(DateUtils.duration(spare)) to spare"
-                }
-            }
-            return "On pace — about \(projected)% by reset"
+            // Answer the same question the willHit branch answers — "how long do
+            // I have?" — rather than switching to a projected percentage.
+            //
+            // Reporting only "~67% by reset" meant the runway answer appeared
+            // just when you were in trouble, so a light user never saw it and
+            // reasonably concluded the feature wasn't there. When you're not
+            // going to run out, the honest runway answer is "the reset is your
+            // deadline, not your budget", which is what this says. The time
+            // itself is deliberately left to the reset line right below, so the
+            // two lines don't print the same clock time twice.
+            _ = spare
+            return "At this pace you're good through the reset (~\(projected)% used)"
         case .warmingUp:
             // Pace looks steep but too little used to trust — tell the user we're
             // watching without crying wolf.
