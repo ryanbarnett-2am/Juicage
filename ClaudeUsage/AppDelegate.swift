@@ -72,6 +72,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.updateStatusBar() }
             .store(in: &cancellables)
+        Preferences.shared.$showEndTimes
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateStatusBar() }
+            .store(in: &cancellables)
 
         viewModel.$needsLogin
             .receive(on: RunLoop.main)
@@ -97,7 +101,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // Single account: show % plus a compact countdown.
             var s = " \(session.percent)%"
             if let reset = session.resetAt, reset.timeIntervalSinceNow > 0 {
-                s += " · \(DateUtils.shortCountdown(to: reset))"
+                s += " · " + (Preferences.shared.showEndTimes ? DateUtils.shortClock(reset) : DateUtils.shortCountdown(to: reset))
             }
             title = s
         } else {
@@ -109,7 +113,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if let busiest = workspaces.compactMap({ $0.session })
                 .max(by: { $0.percent < $1.percent }),
                let reset = busiest.resetAt, reset.timeIntervalSinceNow > 0 {
-                s += " · \(DateUtils.shortCountdown(to: reset))"
+                s += " · " + (Preferences.shared.showEndTimes ? DateUtils.shortClock(reset) : DateUtils.shortCountdown(to: reset))
             }
             title = s
         }

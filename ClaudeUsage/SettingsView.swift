@@ -19,8 +19,12 @@ struct SettingsView: View {
                 Toggle("When on pace to hit a limit", isOn: $prefs.notifyForecast)
             }
 
-            Section("Menu Bar") {
+            Section("Display") {
                 Toggle("Show percentage next to the ring", isOn: $prefs.showMenuBarText)
+                Picker("Show times as", selection: $prefs.showEndTimes) {
+                    Text("End time — 1:00 PM").tag(true)
+                    Text("Time remaining — 3h 56m").tag(false)
+                }
             }
 
             Section("Local Models") {

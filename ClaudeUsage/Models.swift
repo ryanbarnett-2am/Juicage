@@ -165,6 +165,14 @@ enum DateUtils {
         return "\(m)m"
     }
 
+    // Menu-bar-sized clock: "1:00p" — about as wide as "3h56m".
+    static func shortClock(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "h:mma"
+        return f.string(from: date).replacingOccurrences(of: "AM", with: "a")
+                                   .replacingOccurrences(of: "PM", with: "p")
+    }
+
     // Wall-clock time for something happening soon: "11:05 AM", or
     // "tomorrow 2:15 AM" when it crosses midnight.
     //

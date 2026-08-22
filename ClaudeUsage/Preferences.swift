@@ -13,6 +13,9 @@ final class Preferences: ObservableObject {
     @Published var notifyAt100: Bool    { didSet { defaults.set(notifyAt100, forKey: "notifyAt100") } }
     @Published var notifyForecast: Bool { didSet { defaults.set(notifyForecast, forKey: "notifyForecast") } }
     @Published var showMenuBarText: Bool { didSet { defaults.set(showMenuBarText, forKey: "showMenuBarText") } }
+    // true  -> "Resets at 1:00 PM"  (plan against the clock)
+    // false -> "Resets in 3h"       (plan against a duration)
+    @Published var showEndTimes: Bool { didSet { defaults.set(showEndTimes, forKey: "showEndTimes") } }
 
     // Local LLM monitoring (Ollama / LM Studio)
     @Published var watchLocalLLMs: Bool  { didSet { defaults.set(watchLocalLLMs, forKey: "watchLocalLLMs") } }
@@ -29,6 +32,7 @@ final class Preferences: ObservableObject {
             "notifyAt100": true,
             "notifyForecast": true,
             "showMenuBarText": true,
+            "showEndTimes": true,
             "watchLocalLLMs": true,
             "notifyLocalDone": true,
             "showLocalTitles": true,
@@ -39,6 +43,7 @@ final class Preferences: ObservableObject {
         notifyAt100     = defaults.bool(forKey: "notifyAt100")
         notifyForecast  = defaults.bool(forKey: "notifyForecast")
         showMenuBarText = defaults.bool(forKey: "showMenuBarText")
+        showEndTimes    = defaults.bool(forKey: "showEndTimes")
         watchLocalLLMs  = defaults.bool(forKey: "watchLocalLLMs")
         notifyLocalDone = defaults.bool(forKey: "notifyLocalDone")
         showLocalTitles = defaults.bool(forKey: "showLocalTitles")

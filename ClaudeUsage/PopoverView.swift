@@ -174,6 +174,7 @@ struct UsageRowView: View {
 
     let metric: UsageMetric
     let resetStyle: ResetStyle
+    @ObservedObject private var prefs = Preferences.shared
 
     private var barColor: Color {
         switch severity(percent: metric.percent, forecast: metric.forecast) {
@@ -197,8 +198,11 @@ struct UsageRowView: View {
             //
             // Clock time leads because that's what you plan against; the
             // duration follows for anyone who reads it the other way.
+            guard prefs.showEndTimes else {
+                return "About \(DateUtils.duration(runsOut)) left at this pace"
+            }
             let at = DateUtils.clockTime(Date().addingTimeInterval(runsOut))
-            return "At this pace you'll run out around \(at) (\(DateUtils.duration(runsOut)))"
+            return "At this pace you'll run out around \(at)"
         case .safe(let projected, let spare, _):
             // Report where you're heading, not how much slack is left.
             //
@@ -232,7 +236,10 @@ struct UsageRowView: View {
     private var resetLine: String? {
         guard let reset = metric.resetAt else { return nil }
         switch resetStyle {
-        case .countdown: return "Resets at \(DateUtils.clockTime(reset)) (\(DateUtils.mediumCountdown(to: reset)))"
+        case .countdown:
+            return prefs.showEndTimes
+                ? "Resets at \(DateUtils.clockTime(reset))"
+                : "Resets in \(DateUtils.mediumCountdown(to: reset))"
         case .date:      return "Resets \(DateUtils.resetDate(reset))"
         }
     }
