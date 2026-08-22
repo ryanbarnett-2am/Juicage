@@ -1,4 +1,4 @@
-# Installing Tally
+# Installing Juicage
 
 A menu bar app that shows your live claude.ai usage, and flags when a local model
 (Ollama / LM Studio) is working. **macOS 13 (Ventura) or later.**
@@ -11,14 +11,14 @@ A menu bar app that shows your live claude.ai usage, and flags when a local mode
 
 1. **Get the app from Releases.** On this project's GitHub page, open the
    **Releases** section (right-hand sidebar) and download the
-   **`Tally-<version>.zip`** asset (e.g. `Tally-1.4.zip`) from the latest
+   **`Juicage-<version>.zip`** asset (e.g. `Juicage-1.4.zip`) from the latest
    release's **Assets**.
    > ⚠️ Do **not** use the green **Code → Download ZIP** button — that gives you
    > the *source code*, not the app.
-2. **Double-click the zip.** macOS unzips it and **`Tally.app` appears right next
+2. **Double-click the zip.** macOS unzips it and **`Juicage.app` appears right next
    to the zip** (you can't browse *inside* a `.zip` in Finder — double-clicking
    to extract it is how you open it).
-3. **Drag `Tally.app` into your Applications folder.**
+3. **Drag `Juicage.app` into your Applications folder.**
 4. **Double-click it.** Releases are signed with an Apple Developer ID and
    notarized by Apple, so it opens normally — no right-click, no security
    warnings, no Terminal commands.
@@ -42,12 +42,12 @@ A menu bar app that shows your live claude.ai usage, and flags when a local mode
 ## If you built it yourself
 
 A copy you build in Xcode is signed **ad-hoc** rather than with a Developer ID,
-so macOS will block the first launch. Right-click (or Control-click) `Tally.app`
+so macOS will block the first launch. Right-click (or Control-click) `Juicage.app`
 → **Open** → **Open**. Once only. If macOS says it's *"damaged"*, it isn't —
 that's just the download flag; clear it with:
 
 ```
-xattr -dr com.apple.quarantine /Applications/Tally.app
+xattr -dr com.apple.quarantine /Applications/Juicage.app
 ```
 
 This only applies to your own builds. Downloads from Releases are notarized and

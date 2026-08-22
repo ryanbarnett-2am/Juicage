@@ -16,7 +16,7 @@ XCODEBUILD="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
 [ -x "$XCODEBUILD" ] || XCODEBUILD="$(xcode-select -p)/usr/bin/xcodebuild"
 
 BUILD="./.release-build"
-APP="$BUILD/Build/Products/Release/Tally.app"
+APP="$BUILD/Build/Products/Release/Juicage.app"
 NOTARY_PROFILE="tally"   # created by: xcrun notarytool store-credentials "tally"
 # ZIP name is set after the build, so it can carry the app's version number.
 
@@ -50,10 +50,10 @@ rm -rf "$BUILD"
 
 echo "Packaging…"
 # Name the zip after the app's actual version, so a downloaded file identifies
-# itself (Tally-1.4.zip) instead of every release being a generic "Tally.zip".
-ABS_APP="$(cd "$(dirname "$APP")" && pwd)/Tally.app"
+# itself (Juicage-1.4.zip) instead of every release being a generic "Juicage.zip".
+ABS_APP="$(cd "$(dirname "$APP")" && pwd)/Juicage.app"
 VERSION="$(defaults read "$ABS_APP/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo dev)"
-ZIP="$HOME/Desktop/Tally-$VERSION.zip"
+ZIP="$HOME/Desktop/Juicage-$VERSION.zip"
 
 rm -f "$ZIP"
 # Strip any quarantine flag before zipping so we don't ship it to recipients.

@@ -221,7 +221,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "Quit Tally", action: #selector(menuQuit), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit Juicage", action: #selector(menuQuit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 
@@ -250,7 +250,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if settingsWindow == nil {
             let hosting = NSHostingController(rootView: SettingsView())
             let win = NSWindow(contentViewController: hosting)
-            win.title = "Tally Preferences"
+            win.title = "Juicage Preferences"
             win.styleMask = [.titled, .closable]
             win.isReleasedWhenClosed = false
             win.center()
@@ -309,5 +309,5 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
 extension Notification.Name {
     // Posted by the popover's "Sign In" button to (re)open the login window.
-    static let openLogin = Notification.Name("TallyOpenLogin")
+    static let openLogin = Notification.Name("JuicageOpenLogin")
 }

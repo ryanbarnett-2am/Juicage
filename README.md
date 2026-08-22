@@ -1,6 +1,8 @@
-# Tally
+# Juicage
 
 **A usage meter for [Claude.ai](https://claude.ai).**
+
+*Juicage was called Tally through v1.4.1. Same app — update in place and your sign-in and settings carry over.*
 
 A lightweight macOS **menu bar app** that shows your live Claude.ai usage at a
 glance — session, weekly, and per-model limits — with colored rings that fill as
@@ -8,9 +10,9 @@ you go and a forecast of whether you're on pace to hit a limit. It also shows
 when a **local** model (Ollama or LM Studio) is working. No dock icon; it runs
 quietly in the background and refreshes on its own.
 
-> **Unofficial.** Tally is not affiliated with, endorsed by, or supported by
+> **Unofficial.** Juicage is not affiliated with, endorsed by, or supported by
 > Anthropic. "Claude" is a trademark of Anthropic; it's used here only to
-> describe what the app works with. Tally reads usage data from claude.ai's own
+> describe what the app works with. Juicage reads usage data from claude.ai's own
 > web session using an **undocumented internal API**, which can change or stop
 > working at any time. Use at your own discretion and in line with Anthropic's
 > Terms of Service.
@@ -66,7 +68,7 @@ structured data the settings page uses.
 
 Neither engine has an "am I busy" API, and both keep a model resident in memory
 for several minutes after the work finishes — so keying off "a model is loaded"
-would leave the indicator lit all afternoon. Tally uses the one signal each
+would leave the indicator lit all afternoon. Juicage uses the one signal each
 engine actually exposes:
 
 - **Ollama** — tails `~/.ollama/logs/server.log`, which brackets every request
@@ -79,10 +81,10 @@ pin the indicator on indefinitely.
 
 ## Why the app isn't sandboxed
 
-Tally is **not** App Sandboxed, and that's deliberate: the local-model feature
+Juicage is **not** App Sandboxed, and that's deliberate: the local-model feature
 cannot work inside the sandbox. Reading Ollama's log file and running the `lms`
 CLI are both blocked by it, and neither engine exposes that information over
-HTTP. Sandboxed, all Tally could report is "a model is loaded" — which, as
+HTTP. Sandboxed, all Juicage could report is "a model is loaded" — which, as
 above, stays true for minutes after the work ends.
 
 If you'd rather keep the sandbox than have the feature, set
@@ -91,17 +93,22 @@ Preferences. Everything else works unchanged.
 
 ## Build & run
 
+> The Xcode project and the bundle identifier (`twoam.Tally`) keep the old
+> names on purpose. The identifier is what macOS keys your saved login and
+> preferences to, so changing it would sign everyone out and reset their
+> settings for no visible benefit — nobody ever sees a bundle ID.
+
 Requires **Xcode** and **macOS 13 (Ventura) or later**. No Apple Developer
 account is needed — the project signs ad-hoc, so a clean checkout builds as-is.
 
 1. Open `ClaudeUsage.xcodeproj` in Xcode. *(The Xcode project keeps its original
-   codename; the app it builds is **Tally**.)*
+   codename; the app it builds is **Juicage**.)*
 2. Press **⌘R** to build and run.
 3. The first launch shows a sign-in window — log into claude.ai once. Your login
    is remembered after that.
 
 To build a shareable copy, run `./package-release.sh`, which produces
-`Tally-<version>.zip` on your Desktop.
+`Juicage-<version>.zip` on your Desktop.
 
 Builds you make yourself are signed **ad-hoc**, so a copy
 moved to another Mac needs a one-time right-click → **Open** to get past
@@ -110,14 +117,14 @@ by Apple, so those just double-click open.
 
 ## Privacy
 
-Tally talks to `claude.ai` and `status.claude.com`, plus `127.0.0.1` for the
+Juicage talks to `claude.ai` and `status.claude.com`, plus `127.0.0.1` for the
 local model engines. Nothing goes to any third party, and there are **no API
 keys or credentials in the code** — your login lives in the app's own web-view
 cookie store on your Mac.
 
 The local-model feature reads data that never leaves your machine: Ollama's log
 file and LM Studio's CLI output. Be aware that LM Studio's stream includes
-**your prompt text**, which Tally displays as the task title and may include in
+**your prompt text**, which Juicage displays as the task title and may include in
 a "finished" notification. It is never stored or transmitted, and *Show what
 it's working on* in Preferences turns it off.
 
