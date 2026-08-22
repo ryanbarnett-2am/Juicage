@@ -15,6 +15,13 @@ class UsageViewModel: ObservableObject {
     // claude.ai numbers above, since these have no quota, just a busy/idle state.
     @Published var localJobs: [LocalJob] = []
 
+    // Jobs finished so far in the current burst — shown in the popover so a long
+    // batch reads as progress rather than a single stuck-looking row.
+    @Published var localCompleted = 0
+
+    // Held slightly past the last job so a batch of short calls doesn't strobe.
+    @Published var localBusy = false
+
     private var fetcher: UsageFetcher!
     private var statusChecker: StatusChecker!
     private let localMonitor = LocalLLMMonitor()
@@ -55,13 +62,21 @@ class UsageViewModel: ObservableObject {
 
         // Local model watcher. Publishes its own list and tells us when a job
         // ends so we can fire the "finished" notification.
-        localMonitor.onFinished = { [weak self] job in
+        localMonitor.onRunFinished = { [weak self] run in
             guard let self, Preferences.shared.notifyLocalDone else { return }
-            NotificationManager.shared.localJobFinished(job)
+            NotificationManager.shared.localRunFinished(run)
         }
         localMonitor.$jobs
             .receive(on: RunLoop.main)
             .sink { [weak self] jobs in self?.localJobs = jobs }
+            .store(in: &cancellables)
+        localMonitor.$completedInRun
+            .receive(on: RunLoop.main)
+            .sink { [weak self] count in self?.localCompleted = count }
+            .store(in: &cancellables)
+        localMonitor.$isBusy
+            .receive(on: RunLoop.main)
+            .sink { [weak self] busy in self?.localBusy = busy }
             .store(in: &cancellables)
         applyLocalPreference(Preferences.shared.watchLocalLLMs)
         Preferences.shared.$watchLocalLLMs
@@ -98,11 +113,13 @@ class UsageViewModel: ObservableObject {
         } else {
             localMonitor.stop()
             localJobs = []
+            localBusy = false
+            localCompleted = 0
         }
     }
 
-    // True while any local model is working — drives the menu bar indicator.
-    var isLocalBusy: Bool { !localJobs.isEmpty }
+    // True while local work is in progress — drives the menu bar indicator.
+    var isLocalBusy: Bool { localBusy }
 
     // Builds the refresh timer using the interval from Preferences, and adds it
     // in `.common` mode so it keeps firing even while a menu is open — and isn't

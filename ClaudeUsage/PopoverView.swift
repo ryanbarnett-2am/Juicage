@@ -37,9 +37,10 @@ struct PopoverView: View {
 
             // Only appears while something is actually running — an idle section
             // would just be clutter in a popover you open to check a number.
-            if !viewModel.localJobs.isEmpty {
+            if viewModel.isLocalBusy {
                 Divider()
-                LocalJobsSection(jobs: viewModel.localJobs)
+                LocalJobsSection(jobs: viewModel.localJobs,
+                                 completed: viewModel.localCompleted)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
             }
@@ -269,6 +270,7 @@ struct UsageRowView: View {
 // its own — nothing else in the popover changes between the 3-minute fetches.
 struct LocalJobsSection: View {
     let jobs: [LocalJob]
+    let completed: Int          // finished so far in this burst
     @State private var now = Date()
 
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -279,9 +281,17 @@ struct LocalJobsSection: View {
                 Image(systemName: "cpu")
                     .font(.caption2)
                     .foregroundStyle(.green)
-                Text(jobs.count == 1 ? "Local model working" : "\(jobs.count) local models working")
+                Text(jobs.count > 1 ? "\(jobs.count) local models working" : "Local model working")
                     .font(.caption).fontWeight(.semibold)
                     .foregroundStyle(.secondary)
+                // A batch fires many short jobs in a row; without a tally it looks
+                // like one job stuck at a few seconds.
+                if completed > 0 {
+                    Text("· \(completed) done")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                }
             }
 
             ForEach(jobs) { job in

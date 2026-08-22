@@ -32,6 +32,16 @@ struct LocalJob: Identifiable, Equatable {
     }
 }
 
+// A finished burst of local activity. One run may be a single generation or
+// thousands of back-to-back calls from an agent loop.
+struct LocalRun {
+    var jobCount: Int
+    var models: [String]     // distinct, in the order first seen
+    var engines: [String]
+    var duration: TimeInterval
+    var lastTitle: String?
+}
+
 // MARK: - Monitor
 
 // Watches the local inference engines and publishes what's running.
@@ -43,8 +53,14 @@ struct LocalJob: Identifiable, Equatable {
 final class LocalLLMMonitor: ObservableObject {
     @Published private(set) var jobs: [LocalJob] = []
 
-    // Fired once per job when it stops, with the job as it last looked.
-    var onFinished: ((LocalJob) -> Void)?
+    // How many jobs have completed in the current burst of activity (0 when idle).
+    @Published private(set) var completedInRun = 0
+
+    // Fired once when a whole burst of local activity goes quiet — NOT once per
+    // job. An agent loop or batch can fire thousands of calls back to back, and
+    // a banner per call is unusable; what you actually want to know is that the
+    // run is over.
+    var onRunFinished: ((LocalRun) -> Void)?
 
     private let ollama = OllamaWatcher()
     private let lmStudio = LMStudioWatcher()
@@ -52,7 +68,11 @@ final class LocalLLMMonitor: ObservableObject {
     private var running: [String: LocalJob] = [:]
     private let queue = DispatchQueue(label: "tally.localllm")
 
-    var isBusy: Bool { !jobs.isEmpty }
+    // Whether to show the indicator. Held briefly past the last observed job so a
+    // batch of short calls reads as one continuous run.
+    @Published private(set) var isBusy = false
+    private static let indicatorHold: TimeInterval = 8
+    private var lastActivityAt: Date?
 
     func start() {
         stop()
@@ -68,6 +88,8 @@ final class LocalLLMMonitor: ObservableObject {
         timer = nil
         lmStudio.stopTitleStream()
         if !jobs.isEmpty { jobs = [] }
+        if isBusy { isBusy = false }
+        lastActivityAt = nil
         running = [:]
     }
 
@@ -94,6 +116,13 @@ final class LocalLLMMonitor: ObservableObject {
 
     private var idleTicks: [String: Int] = [:]
 
+    private var runStartedAt: Date?
+    private var runLastActive: Date?
+    private var runJobCount = 0
+    private var runModels: [String] = []
+    private var runEngines: [String] = []
+    private var runLastTitle: String?
+
     private func apply(_ found: [LocalJob]) {
         // If the GPU reading is unavailable, trust the engines rather than
         // second-guessing them.
@@ -119,12 +148,87 @@ final class LocalLLMMonitor: ObservableObject {
 
         // Anything that was running and isn't any more just finished — unless we
         // dropped it as stale, which is a wedged engine, not a completed job.
+        // Finished jobs are tallied into the current run rather than announced.
         for (id, job) in running where byID[id] == nil {
-            if !stalled.contains(id) { onFinished?(job) }
+            guard !stalled.contains(id) else { continue }
+            // Both engines are tallied exactly from their event sources below —
+            // counting poll transitions here too would double-count.
+            if !job.model.isEmpty, job.model != OllamaWatcher.unknownModel,
+               !runModels.contains(job.model) { runModels.append(job.model) }
+            if !runEngines.contains(job.engine.rawValue) { runEngines.append(job.engine.rawValue) }
+            if let title = job.title { runLastTitle = title }
+        }
+        // Exact, and catches generations too short to land on a poll.
+        let ollamaDone = ollama.drainCompleted()
+        let lmDone = lmStudio.drainCompleted()
+        for (count, engine) in [(ollamaDone, LocalJob.Engine.ollama),
+                                (lmDone, LocalJob.Engine.lmStudio)] where count > 0 {
+            runJobCount += count
+            if !runEngines.contains(engine.rawValue) { runEngines.append(engine.rawValue) }
+        }
+        let eventActivity = ollamaDone + lmDone > 0
+        if eventActivity {
+            if runStartedAt == nil { runStartedAt = Date() }
+            runLastActive = Date()
         }
         running = byID
         let ordered = live.sorted { $0.startedAt < $1.startedAt }
         if ordered != jobs { jobs = ordered }
+
+        // A batch fires many sub-second calls with gaps between them. Reporting
+        // the raw instantaneous state would strobe the menu bar dot on and off;
+        // holding it briefly reads as "still working", which is the truth.
+        if !live.isEmpty || eventActivity { lastActivityAt = Date() }
+        let held = lastActivityAt.map { Date().timeIntervalSince($0) < Self.indicatorHold } ?? false
+        if isBusy != held { isBusy = held }
+
+        updateRun(active: held)
+    }
+
+    // MARK: - Run tracking
+
+    // A "run" is one burst of local work: it opens on the first job and closes
+    // only once everything has been quiet for `settleWindow`. Back-to-back calls
+    // in a batch land well inside that window, so a 2,000-call job is a single
+    // run — and a single notification — instead of 2,000 of them.
+    //
+    // The cost is that a lone generation is announced up to `settleWindow` late.
+    // That's the right trade: the notification exists for when you've walked
+    // away, and if you're sitting there watching, you don't need it at all.
+    private static let settleWindow: TimeInterval = 30
+    private static let minRunDuration: TimeInterval = 10
+
+    private func updateRun(active: Bool) {
+        let now = Date()
+        if active {
+            if runStartedAt == nil {
+                runStartedAt = now
+                runJobCount = 0
+                runModels = []
+                runEngines = []
+                runLastTitle = nil
+            }
+            runLastActive = now
+        } else if let started = runStartedAt, let last = runLastActive,
+                  now.timeIntervalSince(last) >= Self.settleWindow {
+            // Measure to the last activity, not to now — the settle window is our
+            // bookkeeping, not part of how long the work took.
+            let duration = last.timeIntervalSince(started)
+            if runJobCount > 0, duration >= Self.minRunDuration {
+                onRunFinished?(LocalRun(jobCount: runJobCount,
+                                        models: runModels,
+                                        engines: runEngines,
+                                        duration: duration,
+                                        lastTitle: runLastTitle))
+            }
+            runStartedAt = nil
+            runLastActive = nil
+            runJobCount = 0
+            runModels = []
+            runEngines = []
+            runLastTitle = nil
+        }
+        if completedInRun != runJobCount { completedInRun = runJobCount }
     }
 
     deinit { timer?.invalidate() }
@@ -138,6 +242,10 @@ final class LocalLLMMonitor: ObservableObject {
 // generation speed. So: tail the log for state, and ask /api/ps for the model
 // name once per job (rather than polling, which would spam the same log).
 final class OllamaWatcher {
+    // Shown until /api/ps answers with the real name; never worth putting in a
+    // run summary.
+    static let unknownModel = "Ollama model"
+
     private let logPath = (NSHomeDirectory() as NSString)
         .appendingPathComponent(".ollama/logs/server.log")
 
@@ -148,12 +256,22 @@ final class OllamaWatcher {
     private var startedAt: Date?
     private var tokensPerSec: Double?
     private var model: String?
+    private var completed = 0
+
+    // Exact count of tasks that finished since the last call, taken straight from
+    // the log. Poll-transition counting would miss short generations — a small
+    // prompt can finish in under 2 seconds, well inside one tick — which would
+    // badly undercount a long batch.
+    func drainCompleted() -> Int {
+        defer { completed = 0 }
+        return completed
+    }
 
     func poll() -> [LocalJob] {
         consumeNewLines()
         guard busy, let startedAt else { return [] }
         return [LocalJob(engine: .ollama,
-                         model: model ?? "Ollama model",
+                         model: model ?? Self.unknownModel,
                          title: nil,
                          startedAt: startedAt,
                          tokensPerSec: tokensPerSec,
@@ -197,6 +315,10 @@ final class OllamaWatcher {
                 tokensPerSec = nil
                 fetchResidentModel()
             }
+            return
+        }
+        if line.contains("stop processing") {
+            completed += 1
             return
         }
         if line.contains("all slots are idle") {
@@ -258,6 +380,17 @@ final class LMStudioWatcher {
     private let titleLock = NSLock()
 
     private var streamProcess: Process?
+    private var predictions = 0
+
+    // Exact count of generations started since the last call, taken from the
+    // event stream. Status polling runs every 2-5s and a short generation can
+    // begin and end entirely between two polls, so polling undercounts a batch
+    // badly — which is exactly the shape of an agent loop.
+    func drainCompleted() -> Int {
+        titleLock.lock(); defer { titleLock.unlock() }
+        defer { predictions = 0 }
+        return predictions
+    }
 
     private var installed: Bool { FileManager.default.isExecutableFile(atPath: cli) }
 
@@ -392,7 +525,11 @@ final class LMStudioWatcher {
         }
         if line.hasPrefix("type:") {
             collectingInput = line.contains("llm.prediction.input")
-            if !collectingInput { flushInput() }
+            if collectingInput {
+                titleLock.lock(); predictions += 1; titleLock.unlock()
+            } else {
+                flushInput()
+            }
             return
         }
         if line.hasPrefix("modelIdentifier:") {

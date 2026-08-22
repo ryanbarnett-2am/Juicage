@@ -77,19 +77,29 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     // MARK: - Local models
 
-    // Fired when a local generation ends. With a local model the useful moment
-    // is usually the finish — you kick off a long job, walk away, and want to
-    // know it's done. Very short runs aren't worth a banner.
-    func localJobFinished(_ job: LocalJob) {
+    // Fired once when a burst of local work goes quiet — not once per call. An
+    // agent loop or batch can issue thousands of generations back to back, so
+    // the useful signal is "the run is over", not "call #1,473 returned".
+    func localRunFinished(_ run: LocalRun) {
         guard authorized else { return }
-        let elapsed = job.elapsed
-        guard elapsed >= 10 else { return }
 
-        var body = "\(job.model) · \(job.engine.rawValue) · took \(DateUtils.compactElapsed(elapsed))"
-        if Preferences.shared.showLocalTitles, let task = job.title {
-            body = "\(task)\n\(body)"
+        let time = DateUtils.compactElapsed(run.duration)
+        var models = run.models.prefix(2).joined(separator: ", ")
+        if run.models.count > 2 { models += " +\(run.models.count - 2)" }
+
+        if run.jobCount == 1 {
+            var body = "\(models) · \(run.engines.joined(separator: ", ")) · took \(time)"
+            if Preferences.shared.showLocalTitles, let task = run.lastTitle {
+                body = "\(task)\n\(body)"
+            }
+            notify(title: "Local model finished", body: body)
+        } else {
+            // No prompt text for a batch — the last of 2,000 prompts would only
+            // mislead about what the run was.
+            let what = models.isEmpty ? run.engines.joined(separator: ", ") : models
+            notify(title: "Local run finished",
+                   body: "\(run.jobCount) generations · \(what) · \(time)")
         }
-        notify(title: "Local model finished", body: body)
     }
 
     private func notify(title: String, body: String) {
