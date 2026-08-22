@@ -25,7 +25,34 @@ final class UsageForecaster {
         key.hasSuffix("session") ? 5 * 60 * 60 : 7 * 24 * 60 * 60
     }
 
-    // Stateless — average pace needs only the current reading, not history.
+    // Recent readings per limit, used for the burst rate below.
+    private struct Sample { let at: Date; let percent: Double }
+    private var history: [String: [Sample]] = [:]
+
+    // How far back a "recent" rate looks, and the minimum span before we trust
+    // one. Readings arrive every few minutes, so this is a handful of samples —
+    // long enough to smooth a single blip, short enough to notice a burst.
+    private static let recentWindow: TimeInterval = 20 * 60
+    private static let minRecentSpan: TimeInterval = 5 * 60
+
+    // Burn rate over the last few readings, in percent per second. Nil when
+    // there isn't enough history yet to say.
+    private func recentRate(key: String, now: Date, percent: Double) -> Double? {
+        var samples = history[key] ?? []
+        // A drop means the limit reset — old samples describe a different window.
+        if let last = samples.last, percent < last.percent - 1 { samples = [] }
+        samples.append(Sample(at: now, percent: percent))
+        samples = samples.filter { now.timeIntervalSince($0.at) <= Self.recentWindow }
+        history[key] = samples
+
+        guard let first = samples.first, samples.count >= 2 else { return nil }
+        let span = now.timeIntervalSince(first.at)
+        guard span >= Self.minRecentSpan else { return nil }
+        let delta = percent - first.percent
+        guard delta > 0 else { return nil }      // idle or flat: nothing to warn about
+        return delta / span
+    }
+
     func update(key: String, percent: Int?, resetAt: Date?,
                 now: Date = Date()) -> ForecastVerdict {
         guard let pctInt = percent, let resetAt else { return .unknown }
@@ -40,11 +67,27 @@ final class UsageForecaster {
         let elapsed = now.timeIntervalSince(windowStart)
         guard elapsed > 0, pct > 0 else { return .unknown }
 
-        // Average pace projected to the reset: projected = pct / windowFraction.
-        let windowFraction = elapsed / windowLength
-        let ratePerSec = pct / elapsed                 // percent per second
-        let projected = pct / windowFraction
-        let timeToLimit = (100.0 - pct) / ratePerSec   // from now, at average pace
+        // Two rates, and we believe the worse of them.
+        //
+        // Average pace alone is too forgiving: idle all morning, then work hard,
+        // and it still reports the gentle average right up until you're out —
+        // "I think I'm fine and then five minutes later I'm out." Recent pace
+        // alone is too jumpy, and was what fired a false alarm on the first
+        // prompt of a session. Taking the max means a burst shortens the estimate
+        // immediately, while the quiet average governs when nothing is happening.
+        //
+        // The *alarm* is still gated on the usage floor below, so a fast burst
+        // early on shows a shrinking estimate without firing a notification.
+        let avgRate = pct / elapsed                    // percent per second
+        let burstRate = recentRate(key: key, now: now, percent: pct)
+        let ratePerSec = max(avgRate, burstRate ?? 0)
+        guard ratePerSec > 0 else { return .unknown }
+
+        // Project forward from now at that rate. With the average rate this is
+        // algebraically identical to pct / windowFraction, so nothing changes
+        // when there's no burst.
+        let projected = pct + ratePerSec * timeUntilReset
+        let timeToLimit = (100.0 - pct) / ratePerSec   // from now, at this pace
 
         if projected >= 100 {
             // On pace to run out — but only sound the alarm once enough of the
