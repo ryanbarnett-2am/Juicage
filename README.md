@@ -103,9 +103,10 @@ account is needed — the project signs ad-hoc, so a clean checkout builds as-is
 To build a shareable copy, run `./package-release.sh`, which produces
 `Tally-<version>.zip` on your Desktop.
 
-Because it's signed ad-hoc rather than with an Apple Developer ID, a built copy
+Builds you make yourself are signed **ad-hoc**, so a copy
 moved to another Mac needs a one-time right-click → **Open** to get past
-Gatekeeper.
+Gatekeeper. Official **Releases** are signed with a Developer ID and notarized
+by Apple, so those just double-click open.
 
 ## Privacy
 
