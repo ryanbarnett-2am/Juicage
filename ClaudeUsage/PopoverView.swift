@@ -189,10 +189,13 @@ struct UsageRowView: View {
         switch metric.forecast {
         case .atLimit:
             return "At limit"
-        case .willHit(let before):
-            // Behind pace: you run out this much time before the reset.
-            return "On pace to hit limit ~\(DateUtils.duration(before)) early"
-        case .safe(let projected, let spare):
+        case .willHit(_, let runsOut):
+            // The question people actually have is "how long do I have?", not
+            // "how far ahead of the reset will I run dry?". Phrasing it against
+            // the reset made the reset sound like the deadline, when the tokens
+            // run out first.
+            return "About \(DateUtils.duration(runsOut)) left at this pace"
+        case .safe(let projected, let spare, _):
             // Report where you're heading, not how much slack is left.
             //
             // This used to show "~Nh to spare" and hide itself whenever that

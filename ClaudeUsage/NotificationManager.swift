@@ -64,9 +64,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         // Forecast: on pace to hit the limit before it resets
         if prefs.notifyForecast && metric.forecast.isAlerting && !state.forecastFired {
-            if case .willHit(let before) = metric.forecast {
-                notify(title: "On pace to hit a limit",
-                       body: "\(prefix)\(metric.label): on pace to run out ~\(DateUtils.duration(before)) before it resets.")
+            if case .willHit(_, let runsOut) = metric.forecast {
+                notify(title: "On pace to run out",
+                       body: "\(prefix)\(metric.label): about \(DateUtils.duration(runsOut)) left at this pace.")
                 state.forecastFired = true
             }
         }

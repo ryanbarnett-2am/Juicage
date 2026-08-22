@@ -73,8 +73,11 @@ enum ForecastVerdict: Equatable {
     case warmingUp                          // pace looks steep, but too little used to trust — "calculating"
     // 🟢 on pace to finish under 100%. `spareBeforeReset` is how much longer your
     // allowance would last past the reset — your time margin (nil when idle).
-    case safe(projectedPercent: Int, spareBeforeReset: TimeInterval?)
-    case willHit(beforeReset: TimeInterval) // 🟠 on pace to hit 100% this early
+    // `runsOutIn` is how long the allowance itself lasts from now at this pace.
+    case safe(projectedPercent: Int, spareBeforeReset: TimeInterval?, runsOutIn: TimeInterval)
+    // 🟠 on pace to hit 100% before the window resets. `runsOutIn` is the number
+    // that actually matters to a person: how long you have left.
+    case willHit(beforeReset: TimeInterval, runsOutIn: TimeInterval)
     case atLimit                            // 🔴 already at/over 100%
 
     var isAlerting: Bool {
@@ -102,7 +105,7 @@ func severity(percent: Int?, forecast: ForecastVerdict) -> Severity {
     if forecast.isAlerting { return .danger }              // will hit / at limit
     let p = percent ?? 0
     if p >= 80 { return .danger }
-    if case .safe(let projected, _) = forecast, projected >= 85 { return .warn }
+    if case .safe(let projected, _, _) = forecast, projected >= 85 { return .warn }
     if p >= 60 { return .warn }
     return .ok
 }
@@ -158,7 +161,7 @@ enum DateUtils {
         let secs = max(0, Int(seconds.rounded()))
         let h = secs / 3600
         let m = (secs % 3600) / 60
-        if h > 0 { return "\(h)h \(m)m" }
+        if h > 0 { return m > 0 ? "\(h)h \(m)m" : "\(h)h" }
         return "\(m)m"
     }
 

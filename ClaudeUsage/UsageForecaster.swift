@@ -52,11 +52,13 @@ final class UsageForecaster {
             // Below the floor we're still "warming up": show it's calculating,
             // but don't alarm or notify.
             guard pct >= Self.warnUsageFloor else { return .warmingUp }
-            return .willHit(beforeReset: max(0, timeUntilReset - timeToLimit))
+            return .willHit(beforeReset: max(0, timeUntilReset - timeToLimit),
+                            runsOutIn: max(0, timeToLimit))
         }
         // Ahead of pace: your allowance would last this much past the reset.
         let spare = timeToLimit - timeUntilReset
         return .safe(projectedPercent: Int(min(99.0, projected).rounded()),
-                     spareBeforeReset: spare)
+                     spareBeforeReset: spare,
+                     runsOutIn: max(0, timeToLimit))
     }
 }
