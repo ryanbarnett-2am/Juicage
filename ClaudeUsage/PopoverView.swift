@@ -192,22 +192,26 @@ struct UsageRowView: View {
         case .willHit(let before):
             // Behind pace: you run out this much time before the reset.
             return "On pace to hit limit ~\(DateUtils.duration(before)) early"
-        case .safe(_, let spare):
-            // Ahead of pace: only worth saying when the margin is meaningful.
+        case .safe(let projected, let spare):
+            // Report where you're heading, not how much slack is left.
             //
-            // Right after launch the forecaster has a single sample, so it falls
-            // back to "average pace since the window opened" — which at low usage
-            // yields absurd headroom (e.g. "44h to spare" on a 5-hour session).
-            // Requiring the spare time to fit within the time remaining keeps that
-            // launch-time noise out; it resolves itself once real usage gives the
-            // forecaster a measurable rate.
+            // This used to show "~Nh to spare" and hide itself whenever that
+            // figure exceeded the time remaining — a guard against the OLD
+            // sample-based forecaster, which could claim "44h to spare" on a
+            // 5-hour session. The forecaster is stateless average pace now and
+            // can't produce that, so the guard only suppressed good output: past
+            // the midpoint of a window it blanked the line entirely unless usage
+            // was already high, which is exactly when you want the reassurance.
+            //
+            // Projected percentage is also just more useful — "about 45% by
+            // reset" says where you land; hours-of-slack doesn't.
             if let spare, let reset = metric.resetAt {
                 let timeLeft = reset.timeIntervalSinceNow
                 if timeLeft > 0, spare <= timeLeft {
-                    return "On pace with ~\(DateUtils.duration(spare)) to spare"
+                    return "On pace — about \(projected)% by reset · ~\(DateUtils.duration(spare)) to spare"
                 }
             }
-            return nil
+            return "On pace — about \(projected)% by reset"
         case .warmingUp:
             // Pace looks steep but too little used to trust — tell the user we're
             // watching without crying wolf.
