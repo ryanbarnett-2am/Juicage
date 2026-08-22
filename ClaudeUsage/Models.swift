@@ -165,6 +165,23 @@ enum DateUtils {
         return "\(m)m"
     }
 
+    // Wall-clock time for something happening soon: "11:05 AM", or
+    // "tomorrow 2:15 AM" when it crosses midnight.
+    //
+    // People plan against the clock, not against a duration — "do I get the
+    // whole morning, or only until 11?" is answerable at a glance, while
+    // "4h 30m" makes you do the arithmetic first.
+    static func clockTime(_ date: Date, now: Date = Date()) -> String {
+        let cal = Calendar.current
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        let time = f.string(from: date)
+        if cal.isDate(date, inSameDayAs: now) { return time }
+        if let tomorrow = cal.date(byAdding: .day, value: 1, to: now),
+           cal.isDate(date, inSameDayAs: tomorrow) { return "tomorrow \(time)" }
+        return resetDate(date, now: now)
+    }
+
     // Friendly absolute reset time for weekly caps: "Wed 11:00 AM".
     static func resetDate(_ date: Date, now: Date = Date()) -> String {
         let f = DateFormatter()

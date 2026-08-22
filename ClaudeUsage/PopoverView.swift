@@ -194,7 +194,11 @@ struct UsageRowView: View {
             // "how far ahead of the reset will I run dry?". Phrasing it against
             // the reset made the reset sound like the deadline, when the tokens
             // run out first.
-            return "About \(DateUtils.duration(runsOut)) left at this pace"
+            //
+            // Clock time leads because that's what you plan against; the
+            // duration follows for anyone who reads it the other way.
+            let at = DateUtils.clockTime(Date().addingTimeInterval(runsOut))
+            return "At this pace you'll run out around \(at) (\(DateUtils.duration(runsOut)))"
         case .safe(let projected, let spare, _):
             // Report where you're heading, not how much slack is left.
             //
@@ -228,7 +232,7 @@ struct UsageRowView: View {
     private var resetLine: String? {
         guard let reset = metric.resetAt else { return nil }
         switch resetStyle {
-        case .countdown: return "Resets in \(DateUtils.mediumCountdown(to: reset))"
+        case .countdown: return "Resets at \(DateUtils.clockTime(reset)) (\(DateUtils.mediumCountdown(to: reset)))"
         case .date:      return "Resets \(DateUtils.resetDate(reset))"
         }
     }
