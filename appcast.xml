@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Juicage</title>
+    <link>https://github.com/ryanbarnett-2am/Juicage</link>
+    <description>Usage meter for claude.ai and local models.</description>
+    <language>en</language>
+    <item>
+      <title>1.5.1</title>
+      <pubDate>Sun, 23 Aug 2026 15:31:53 +0000</pubDate>
+      <sparkle:version>1.5.1</sparkle:version>
+      <sparkle:shortVersionString>1.5.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://github.com/ryanbarnett-2am/Juicage/releases/tag/v1.5.1</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/ryanbarnett-2am/Juicage/releases/download/v1.5.1/Juicage-1.5.1.zip" sparkle:edSignature="3HCefH9idgPK3/SlskvCKw6v5HoMWbHbBaQ0bQn1gRhop3fPNzp6UVoYUYkd8qRtbV9uYxMJgkbrSps7Ga1BDg==" length="544113" type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>

@@ -75,6 +75,20 @@ elif [ -n "$SIGN_ID" ]; then
   echo "    run: xcrun notarytool store-credentials \"$NOTARY_PROFILE\""
 fi
 
+# Sign the update for Sparkle and refresh the appcast — the feed installed copies
+# poll to discover this release. Without this step a release ships but nobody's
+# app ever hears about it.
+SPARKLE_BIN="$HOME/.sparkle/bin"
+if [ -x "$SPARKLE_BIN/sign_update" ]; then
+  echo "Updating appcast…"
+  SIG_LINE="$("$SPARKLE_BIN/sign_update" "$ZIP")"
+  python3 scripts/update_appcast.py "$VERSION" "$SIG_LINE"
+  echo "  ⚠️  commit and push appcast.xml, or nobody sees this update"
+else
+  echo "⚠️  Sparkle tools not found at $SPARKLE_BIN — appcast NOT updated."
+  echo "    Installed copies will not discover this release."
+fi
+
 echo "Signature: $(codesign -dv "$APP" 2>&1 | grep -E '^Signature' || echo 'unknown')"
 echo "Entitlements: $(codesign -d --entitlements - "$APP" 2>&1 | grep -c '\[Key\]') key(s)"
 echo "✅ Done → $ZIP"

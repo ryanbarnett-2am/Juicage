@@ -17,6 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         UsageParser.runSelfTest()
         #endif
         NotificationManager.shared.requestAuthorization()
+        _ = UpdateController.shared     // starts Sparkle's scheduled check, if present
         setupStatusBar()
         setupPopover()
         observeViewModel()
@@ -219,6 +220,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         prefsItem.target = self
         menu.addItem(prefsItem)
 
+        let update = NSMenuItem(title: "Check for Updates…", action: #selector(menuCheckForUpdates), keyEquivalent: "")
+        update.target = self
+        update.isEnabled = UpdateController.shared.canCheckForUpdates
+        menu.addItem(update)
+
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: "Quit Juicage", action: #selector(menuQuit), keyEquivalent: "q")
@@ -240,6 +246,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let url = URL(string: "https://claude.ai/settings/usage") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    @objc private func menuCheckForUpdates() {
+        UpdateController.shared.checkForUpdates()
     }
 
     @objc private func menuToggleLaunchAtLogin() {
