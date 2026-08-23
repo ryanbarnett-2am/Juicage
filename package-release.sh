@@ -48,6 +48,35 @@ rm -rf "$BUILD"
   CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   build >/dev/null
 
+# Sparkle ships its own pre-signed helpers — Updater.app, Autoupdate and two XPC
+# services — nested inside the framework. Xcode signs our app and the framework
+# but leaves those alone, so they keep Sparkle's signature and notarization
+# rejects the whole archive: "The binary is not signed with a valid Developer ID
+# certificate" / "The signature does not include a secure timestamp".
+#
+# Re-sign them innermost-first, then the framework, then the app — re-signing
+# anything nested breaks the seal of everything containing it. The app carries no
+# entitlements, so there is nothing to preserve across the re-sign.
+FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
+if [ -d "$FRAMEWORK" ]; then
+  echo "Re-signing Sparkle helpers…"
+  if [ -n "$SIGN_ID" ]; then
+    CS=(--force --options runtime --timestamp --sign "$SIGN_ID")
+  else
+    CS=(--force --sign -)
+  fi
+  for nested in \
+    "$FRAMEWORK/Versions/B/XPCServices/Downloader.xpc" \
+    "$FRAMEWORK/Versions/B/XPCServices/Installer.xpc" \
+    "$FRAMEWORK/Versions/B/Updater.app" \
+    "$FRAMEWORK/Versions/B/Autoupdate" ; do
+    [ -e "$nested" ] && codesign "${CS[@]}" "$nested"
+  done
+  codesign "${CS[@]}" "$FRAMEWORK"
+  codesign "${CS[@]}" "$APP"
+  codesign --verify --deep --strict "$APP" || { echo "❌ bundle failed verification after re-sign"; exit 1; }
+fi
+
 echo "Packaging…"
 # Name the zip after the app's actual version, so a downloaded file identifies
 # itself (Juicage-1.4.zip) instead of every release being a generic "Juicage.zip".
