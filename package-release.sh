@@ -140,7 +140,7 @@ fi
 DMG="$HOME/Desktop/Juicage-$VERSION.dmg"
 rm -f "$DMG"
 echo "Building disk image…"
-hdiutil create -volname "Juicage" -srcfolder "$APP" -ov -format UDZO -quiet "$DMG"
+./packaging/make-dmg.sh "$APP" "$DMG" "Juicage"
 if [ -n "$SIGN_ID" ]; then
   codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
   if xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
