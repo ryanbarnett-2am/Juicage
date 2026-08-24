@@ -43,7 +43,7 @@ rm -rf "$BUILD"
 # rejects any binary carrying it, and Xcode injects it by default.
 "$XCODEBUILD" -project ClaudeUsage.xcodeproj -scheme ClaudeUsage \
   -configuration Release -derivedDataPath "$BUILD" \
-  -destination 'platform=macOS' \
+  -destination 'generic/platform=macOS' \
   "${SIGN_ARGS[@]}" \
   CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   build >/dev/null
@@ -76,6 +76,16 @@ if [ -d "$FRAMEWORK" ]; then
   codesign "${CS[@]}" "$APP"
   codesign --verify --deep --strict "$APP" || { echo "❌ bundle failed verification after re-sign"; exit 1; }
 fi
+
+# Every release before 1.6.1 shipped arm64-only — "platform=macOS" builds just
+# the machine's own architecture, so Intel Macs could not run it at all and
+# nothing in the pipeline noticed. Check rather than trust.
+if ! lipo -info "$APP/Contents/MacOS/Juicage" 2>/dev/null | grep -q "x86_64 arm64\|arm64 x86_64"; then
+  echo "❌ not a universal binary: $(lipo -info "$APP/Contents/MacOS/Juicage" 2>&1)"
+  echo "   Intel Macs would not be able to run this. Refusing to package."
+  exit 1
+fi
+echo "  universal binary ✓ ($(lipo -info "$APP/Contents/MacOS/Juicage" 2>&1 | sed 's/.*are: //'))"
 
 echo "Packaging…"
 # Name the zip after the app's actual version, so a downloaded file identifies
