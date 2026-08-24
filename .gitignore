@@ -25,3 +25,6 @@ Packages/
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+# Local idea backlog — deliberately not published
+IDEAS.md

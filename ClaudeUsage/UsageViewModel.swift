@@ -22,7 +22,12 @@ class UsageViewModel: ObservableObject {
     // Held slightly past the last job so a batch of short calls doesn't strobe.
     @Published var localBusy = false
 
-    private var fetcher: UsageFetcher!
+    // Every enabled source of usage. Claude is the only one today; the list is
+    // what makes adding a second one a matter of appending to it.
+    private var providers: [UsageProvider] = []
+    // Latest results per provider, merged into `workspaces` on every delivery.
+    // Kept separately so one provider reporting doesn't erase another's numbers.
+    private var resultsByProvider: [String: [WorkspaceUsage]] = [:]
     private var statusChecker: StatusChecker!
     private let localMonitor = LocalLLMMonitor()
     private let forecaster = UsageForecaster()
@@ -36,22 +41,25 @@ class UsageViewModel: ObservableObject {
     private let staleAfter: TimeInterval = 15 * 60
 
     func start() {
-        fetcher = UsageFetcher()
-
-        fetcher.onWorkspacesReceived = { [weak self] list in
-            DispatchQueue.main.async { self?.apply(list) }
-        }
-        fetcher.onNeedsLogin = { [weak self] in
-            DispatchQueue.main.async {
-                self?.needsLogin = true
-                self?.isLoading = false
+        providers = [ClaudeProvider()]
+        for provider in providers {
+            let key = provider.id
+            provider.onUsage = { [weak self] list in
+                DispatchQueue.main.async { self?.apply(list, from: key) }
             }
-        }
-        fetcher.onError = { [weak self] message in
-            DispatchQueue.main.async {
-                self?.errorMessage = message   // keep last good workspaces on screen
-                self?.isLoading = false
+            provider.onNeedsLogin = { [weak self] in
+                DispatchQueue.main.async {
+                    self?.needsLogin = true
+                    self?.isLoading = false
+                }
             }
+            provider.onError = { [weak self] message in
+                DispatchQueue.main.async {
+                    self?.errorMessage = message   // keep last good numbers on screen
+                    self?.isLoading = false
+                }
+            }
+            provider.start()
         }
 
         statusChecker = StatusChecker()
@@ -123,6 +131,12 @@ class UsageViewModel: ObservableObject {
     // True while local work is in progress — drives the menu bar indicator.
     var isLocalBusy: Bool { localBusy }
 
+    // Whether to label blocks with which service they came from. Stays false
+    // while Claude is the only provider, so nothing changes visually today.
+    var showsMultipleProviders: Bool {
+        Set(workspaces.map(\.providerID)).count > 1
+    }
+
     // Builds the refresh timer using the interval from Preferences, and adds it
     // in `.common` mode so it keeps firing even while a menu is open — and isn't
     // limited to the default run-loop mode that App Nap can suspend.
@@ -137,7 +151,7 @@ class UsageViewModel: ObservableObject {
 
     func refresh() {
         isLoading = true
-        fetcher.fetch()
+        providers.forEach { $0.fetch() }
 
         // Safety net: never let the spinner hang. If nothing comes back in 25s,
         // stop loading so the "stale" cue shows and the next cycle can retry.
@@ -158,10 +172,15 @@ class UsageViewModel: ObservableObject {
         refresh()
     }
 
-    // Store fresh data and attach a burn-rate forecast to each limit. The
-    // forecaster keeps a separate history per workspace + metric.
-    private func apply(_ list: [WorkspaceUsage]) {
-        workspaces = list.map { ws in
+    // Store one provider's fresh data and attach a burn-rate forecast to each
+    // limit. The forecaster keeps a separate history per workspace + metric, and
+    // workspace ids are provider-prefixed, so histories can't collide.
+    private func apply(_ list: [WorkspaceUsage], from providerID: String) {
+        resultsByProvider[providerID] = list
+        // Re-flatten in provider order so the list doesn't reshuffle when one
+        // provider happens to answer first.
+        let merged = providers.flatMap { resultsByProvider[$0.id] ?? [] }
+        workspaces = merged.map { ws in
             var updated = ws
             let scope = ws.id
             updated.session = forecasted(ws.session, scope: scope)

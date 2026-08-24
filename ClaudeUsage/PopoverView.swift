@@ -110,7 +110,8 @@ struct PopoverView: View {
                 ForEach(Array(viewModel.workspaces.enumerated()), id: \.element.id) { index, ws in
                     if index > 0 { Divider() }
                     WorkspaceSection(workspace: ws,
-                                     showName: viewModel.workspaces.count > 1)
+                                     showName: viewModel.workspaces.count > 1,
+                                     showProvider: viewModel.showsMultipleProviders)
                 }
             }
         }
@@ -131,11 +132,22 @@ struct PopoverView: View {
 struct WorkspaceSection: View {
     let workspace: WorkspaceUsage
     let showName: Bool
+    var showProvider: Bool = false
+
+    // "Claude", "Claude · Work", or just "Work" — whichever parts are needed to
+    // tell this block apart from the others. With a single provider and a single
+    // workspace there's nothing to disambiguate, so no heading appears at all.
+    private var heading: String? {
+        var parts: [String] = []
+        if showProvider { parts.append(workspace.providerName) }
+        if showName, let name = workspace.workspaceName { parts.append(name) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            if showName, let name = workspace.workspaceName {
-                Text(name)
+            if let heading {
+                Text(heading)
                     .font(.subheadline).fontWeight(.semibold)
                     .foregroundStyle(.secondary)
             }

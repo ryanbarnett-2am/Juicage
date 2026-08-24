@@ -26,6 +26,8 @@ struct UsageMetric: Identifiable, Equatable {
 
 // A snapshot of one workspace's whole usage picture.
 struct WorkspaceUsage: Equatable, Identifiable {
+    var providerID: String             // which service this came from, e.g. "claude"
+    var providerName: String           // shown when more than one provider is enabled
     var workspaceID: String?           // org uuid — stable identity for the list & forecaster
     var workspaceName: String?
     var session: UsageMetric?          // the 5-hour "Current session"
@@ -38,9 +40,14 @@ struct WorkspaceUsage: Equatable, Identifiable {
     var lastUpdated: Date?
     var error: String?
 
-    var id: String { workspaceID ?? workspaceName ?? "workspace" }
+    // Prefixed with the provider: two services could easily both call something
+    // "default", and this id drives both list identity and the forecaster's
+    // per-metric history.
+    var id: String { "\(providerID).\(workspaceID ?? workspaceName ?? "default")" }
 
     init() {
+        providerID = "claude"
+        providerName = "Claude"
         workspaceID = nil
         workspaceName = nil
         session = nil
