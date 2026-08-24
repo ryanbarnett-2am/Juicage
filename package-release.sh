@@ -128,6 +128,29 @@ else
   echo "    Installed copies will not discover this release."
 fi
 
+# A disk image for people to download.
+#
+# The zip is kept because Sparkle's appcast needs one and Sparkle extracts it
+# correctly itself — but a zip is the wrong container for humans. Sparkle's
+# framework is a *versioned* bundle whose root is symlinks into Versions/Current,
+# and some unzip implementations don't reproduce that, which breaks the seal:
+# 1.6 and 1.6.1 arrived on another Mac as "Juicage is damaged and can't be
+# opened". Reproduced locally — `unzip` breaks it, `ditto` and a DMG don't.
+# A disk image reproduces the bundle exactly however the user opens it.
+DMG="$HOME/Desktop/Juicage-$VERSION.dmg"
+rm -f "$DMG"
+echo "Building disk image…"
+hdiutil create -volname "Juicage" -srcfolder "$APP" -ov -format UDZO -quiet "$DMG"
+if [ -n "$SIGN_ID" ]; then
+  codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
+  if xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
+    echo "Notarizing disk image…"
+    xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun stapler staple "$DMG"
+  fi
+fi
+echo "  disk image → $DMG"
+
 echo "Signature: $(codesign -dv "$APP" 2>&1 | grep -E '^Signature' || echo 'unknown')"
 echo "Entitlements: $(codesign -d --entitlements - "$APP" 2>&1 | grep -c '\[Key\]') key(s)"
 echo "✅ Done → $ZIP"

@@ -194,8 +194,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    // "Juicage 1.6.2" — disabled, purely a label. Version confusion is the first
+    // thing that comes up whenever someone reports a problem, so it's worth the
+    // zero clicks it takes to read it here.
+    private var versionMenuItem: NSMenuItem {
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let item = NSMenuItem(title: "Juicage \(short)", action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        return item
+    }
+
     private func showContextMenu() {
         let menu = NSMenu()
+        menu.addItem(versionMenuItem)
+        menu.addItem(.separator())
 
         let refresh = NSMenuItem(title: "Refresh Now", action: #selector(menuRefresh), keyEquivalent: "")
         refresh.target = self
@@ -227,6 +239,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         menu.addItem(.separator())
 
+        let about = NSMenuItem(title: "About Juicage", action: #selector(menuAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
+
+        menu.addItem(.separator())
+
         let quit = NSMenuItem(title: "Quit Juicage", action: #selector(menuQuit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
@@ -246,6 +264,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let url = URL(string: "https://claude.ai/settings/usage") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    @objc private func menuAbout() {
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+        // An accessory app has no menu bar of its own, so the panel opens behind
+        // everything unless we activate first.
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationName: "Juicage",
+            .applicationVersion: short,
+            .version: build,
+            .init(rawValue: "Copyright"): "An unofficial usage meter for claude.ai.\nNot affiliated with Anthropic.",
+        ])
     }
 
     @objc private func menuCheckForUpdates() {
