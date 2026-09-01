@@ -17,6 +17,20 @@ quietly in the background and refreshes on its own.
 > working at any time. Use at your own discretion and in line with Anthropic's
 > Terms of Service.
 
+## Install
+
+```sh
+brew install --cask ryanbarnett-2am/juicage/juicage
+```
+
+Or download the `.dmg` from [Releases](https://github.com/ryanbarnett-2am/Juicage/releases/latest),
+open it, and drag Juicage into Applications. Releases are signed with an Apple
+Developer ID and notarized, so there's no security prompt to click through.
+
+Juicage updates itself after that — `brew upgrade` is optional.
+
+Requires **macOS 13 (Ventura) or later**. Universal (Apple Silicon and Intel).
+
 ## Features
 
 ### Claude.ai usage
