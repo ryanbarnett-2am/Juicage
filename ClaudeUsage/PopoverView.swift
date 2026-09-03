@@ -153,14 +153,17 @@ struct WorkspaceSection: View {
             }
 
             if let session = workspace.session {
-                UsageRowView(metric: session, resetStyle: .countdown)
+                UsageRowView(metric: session, resetStyle: .countdown,
+                             providerID: workspace.providerID)
             }
             if let weekly = workspace.weeklyAll {
-                UsageRowView(metric: weekly, resetStyle: .date)
+                UsageRowView(metric: weekly, resetStyle: .date,
+                             providerID: workspace.providerID)
             }
             // Per-model weekly caps — Fable and friends appear here automatically.
             ForEach(workspace.weeklyModels) { model in
-                UsageRowView(metric: model, resetStyle: .date)
+                UsageRowView(metric: model, resetStyle: .date,
+                             providerID: workspace.providerID)
             }
 
             if workspace.extraEnabled {
@@ -186,7 +189,14 @@ struct UsageRowView: View {
 
     let metric: UsageMetric
     let resetStyle: ResetStyle
+    var providerID: String = "claude"
     @ObservedObject private var prefs = Preferences.shared
+
+    // Peaks of recent completed windows. Empty until a couple of windows have
+    // closed, and the row simply omits the line until then.
+    private var history: [Int] {
+        UsageHistory.shared.series(providerID: providerID, metricKey: metric.key, limit: 12)
+    }
 
     private var barColor: Color {
         switch severity(percent: metric.percent, forecast: metric.forecast) {
@@ -295,7 +305,31 @@ struct UsageRowView: View {
                     .font(.caption2)
                     .foregroundStyle(Color.secondary.opacity(0.7))
             }
+
+            // Recent history. Needs two closed windows before it says anything,
+            // so it appears on its own once there's something to show.
+            let past = history
+            if past.count >= 2 {
+                HStack(spacing: 6) {
+                    SparklineView(values: past, color: barColor)
+                        .frame(height: 14)
+                    Text(historyCaption(past))
+                        .font(.caption2)
+                        .foregroundStyle(Color.secondary.opacity(0.7))
+                        .fixedSize()
+                }
+                .padding(.top, 1)
+            }
         }
+    }
+
+    // "last 8 · maxed 3x" / "last 8 · peak 62%". The count of times you ran out
+    // is the number that decides whether a plan fits; when it never happened,
+    // the highest you reached is the useful stand-in.
+    private func historyCaption(_ past: [Int]) -> String {
+        let maxed = past.filter { $0 >= 100 }.count
+        if maxed > 0 { return "last \(past.count) · maxed \(maxed)×" }
+        return "last \(past.count) · peak \(past.max() ?? 0)%"
     }
 }
 

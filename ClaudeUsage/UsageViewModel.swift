@@ -188,6 +188,8 @@ class UsageViewModel: ObservableObject {
             updated.weeklyModels = ws.weeklyModels.map { forecasted($0, scope: scope) ?? $0 }
             return updated
         }
+        // History can't be backfilled, so record before anything else can fail.
+        UsageHistory.shared.record(workspaces)
         NotificationManager.shared.evaluate(workspaces)
         isLoading = false
         needsLogin = false
