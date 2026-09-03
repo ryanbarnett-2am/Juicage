@@ -35,6 +35,16 @@ struct PopoverView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
 
+            // The day strip. Only worth showing once there's more than the window
+            // you're currently in — one block on its own explains nothing.
+            if dayWindows.count >= 2 {
+                Divider()
+                DayStripView(windows: dayWindows,
+                             windowLength: UsageForecaster.windowLength(forKey: "session"))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            }
+
             // Only appears while something is actually running — an idle section
             // would just be clutter in a popover you open to check a number.
             if viewModel.isLocalBusy {
@@ -67,6 +77,18 @@ struct PopoverView: View {
             .padding(.vertical, 10)
         }
         .frame(width: 300)
+    }
+
+    // Session windows overlapping the last half-day, for the strip.
+    private var dayWindows: [UsageWindow] {
+        guard let provider = viewModel.workspaces.first?.providerID else { return [] }
+        let length = UsageForecaster.windowLength(forKey: "session")
+        // The strip's axis is today, so fetch anything overlapping today.
+        let start = Calendar.current.startOfDay(for: Date())
+        return UsageHistory.shared.windows(providerID: provider, metricKey: "session",
+                                           from: start,
+                                           to: start.addingTimeInterval(24 * 3600),
+                                           windowLength: length)
     }
 
     private var footerText: String {
@@ -264,9 +286,16 @@ struct UsageRowView: View {
         guard let reset = metric.resetAt else { return nil }
         switch resetStyle {
         case .countdown:
-            return prefs.showEndTimes
-                ? "Resets at \(DateUtils.clockTime(reset))"
-                : "Resets in \(DateUtils.mediumCountdown(to: reset))"
+            // A session window is a rolling five hours anchored to whenever it
+            // opened, not a fixed clock — so when it opened is half the story,
+            // and it's the half nobody can see. Start work an hour before a
+            // window closes and you get an hour of it, not five.
+            let opened = reset.addingTimeInterval(-UsageForecaster.windowLength(forKey: metric.key))
+            if prefs.showEndTimes {
+                return "Opened \(DateUtils.clockTime(opened)) · resets \(DateUtils.clockTime(reset))"
+            }
+            let ago = DateUtils.duration(-opened.timeIntervalSinceNow)
+            return "Opened \(ago) ago · resets in \(DateUtils.mediumCountdown(to: reset))"
         case .date:      return "Resets \(DateUtils.resetDate(reset))"
         }
     }
@@ -311,8 +340,8 @@ struct UsageRowView: View {
             let past = history
             if past.count >= 2 {
                 HStack(spacing: 6) {
-                    SparklineView(values: past, color: barColor)
-                        .frame(height: 14)
+                    UsageHistoryChart(values: past, color: barColor)
+                        .frame(height: 18)
                     Text(historyCaption(past))
                         .font(.caption2)
                         .foregroundStyle(Color.secondary.opacity(0.7))
@@ -328,8 +357,12 @@ struct UsageRowView: View {
     // the highest you reached is the useful stand-in.
     private func historyCaption(_ past: [Int]) -> String {
         let maxed = past.filter { $0 >= 100 }.count
+        // Running out is the headline when it happens. When it doesn't, the
+        // useful number is the opposite one: how much of what you pay for
+        // expires unused. The chart already shows the peak.
         if maxed > 0 { return "last \(past.count) · maxed \(maxed)×" }
-        return "last \(past.count) · peak \(past.max() ?? 0)%"
+        let used = Double(past.reduce(0, +)) / Double(past.count)
+        return "last \(past.count) · ~\(Int((100 - used).rounded()))% unused"
     }
 }
 

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Combine
+import WebKit   // WKWebsiteDataStore, for per-account sign-in
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
@@ -78,12 +79,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .sink { [weak self] _ in self?.updateStatusBar() }
             .store(in: &cancellables)
 
-        viewModel.$needsLogin
+        // Open the sign-in window for whichever account needs one. With several
+        // accounts they queue rather than fighting over a single window.
+        viewModel.$pendingLogins
             .receive(on: RunLoop.main)
-            .sink { [weak self] needs in
-                if needs {
-                    self?.statusItem.button?.title = " Sign in"
-                    self?.showLoginWindow()
+            .sink { [weak self] pending in
+                guard let self, let account = pending.first else { return }
+                if self.loginWindow == nil {
+                    self.statusItem.button?.title = " Sign in"
+                    self.showLoginWindow(for: account)
                 }
             }
             .store(in: &cancellables)
@@ -257,7 +261,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func menuRefresh() { viewModel.refresh() }
-    @objc private func menuSignIn()  { showLoginWindow() }
+    @objc private func menuSignIn()  { showLoginWindow(for: nil) }
     @objc private func menuQuit()    { NSApp.terminate(nil) }
 
     @objc private func menuOpenPage() {
@@ -302,7 +306,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func showLoginWindow() {
+    // Which account the open sign-in window belongs to.
+    private var loginAccount: Account?
+
+    func showLoginWindow(for account: Account? = nil) {
+        loginAccount = account ?? AccountStore.shared.accounts.first
         // Become a regular app while signing in: this gives a Dock icon (click it
         // to bring the window back if it slips behind your browser) and reliable
         // mouse/keyboard input. We revert to menu-bar-only when done.
@@ -311,7 +319,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NSApp.setActivationPolicy(.regular)
 
         if loginWindow == nil {
-            let view = LoginView(onLoggedIn: { [weak self] in
+            let store = loginAccount.map { AccountStore.dataStore(for: $0) } ?? .default()
+            let view = LoginView(dataStore: store, onLoggedIn: { [weak self] in
                 self?.finishLogin()
             })
             let hosting = NSHostingController(rootView: view)
@@ -332,7 +341,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         loginWindow?.orderOut(nil)
         loginWindow = nil
         NSApp.setActivationPolicy(.accessory)   // back to menu-bar-only
-        viewModel.loggedIn()
+        if let account = loginAccount {
+            viewModel.signedIn(account)
+        } else {
+            viewModel.loggedIn()
+        }
+        loginAccount = nil
     }
 
     @objc private func handleOpenLogin() {

@@ -42,7 +42,13 @@ final class UsageHistory {
         return dir.appendingPathComponent("history.json")
     }()
 
-    private init() { load() }
+    private init() {
+        let collapsed = load()
+        // Writing back only happens when a peak rises, so a load that merged
+        // legacy duplicates would otherwise sit un-persisted indefinitely —
+        // correct in memory, still wrong on disk, and wrong again next launch.
+        if collapsed { scheduleSave() }
+    }
 
     // MARK: - Recording
 
@@ -106,6 +112,30 @@ final class UsageHistory {
         return (s.filter { $0 >= 100 }.count, s.count)
     }
 
+    // Whole window records overlapping a time range, oldest first — what the day
+    // strip needs, since it positions each window by when it actually ran rather
+    // than just how full it got.
+    func windows(providerID: String, metricKey: String,
+                 from: Date, to: Date, windowLength: TimeInterval) -> [UsageWindow] {
+        windows.values
+            .filter { w in
+                guard w.providerID == providerID, w.metricKey == metricKey else { return false }
+                let opened = w.resetAt.addingTimeInterval(-windowLength)
+                return w.resetAt > from && opened < to      // any overlap with the range
+            }
+            .sorted { $0.resetAt < $1.resetAt }
+    }
+
+    // Average share of each window left unused — the capacity you paid for and
+    // didn't spend. The mirror of the peak: 45% average use means 55% expired.
+    func averageUnused(providerID: String, metricKey: String,
+                       limit: Int = 12, now: Date = Date()) -> Int? {
+        let s = series(providerID: providerID, metricKey: metricKey, limit: limit, now: now)
+        guard !s.isEmpty else { return nil }
+        let usedAvg = Double(s.reduce(0, +)) / Double(s.count)
+        return Int((100 - usedAvg).rounded())
+    }
+
     // MARK: - Storage
 
     private func prune() {
@@ -143,12 +173,31 @@ final class UsageHistory {
         try? data.write(to: fileURL, options: .atomic)
     }
 
-    private func load() {
-        guard let data = try? Data(contentsOf: fileURL) else { return }
+    // Returns true when normalising merged records together, so the caller can
+    // persist the cleaned-up store.
+    @discardableResult
+    private func load() -> Bool {
+        guard let data = try? Data(contentsOf: fileURL) else { return false }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        guard let list = try? decoder.decode([UsageWindow].self, from: data) else { return }
-        for w in list { windows[w.id] = w }
+        guard let list = try? decoder.decode([UsageWindow].self, from: data) else { return false }
+        // Canonicalise on the way in as well as out. Snapping only on write left
+        // records saved by older builds keyed to their original second, so they
+        // survived forever and every new reading created a second entry for the
+        // same window — the duplicates came straight back.
+        for w in list {
+            var normalised = w
+            normalised = UsageWindow(providerID: w.providerID, metricKey: w.metricKey,
+                                     resetAt: canonical(w.resetAt),
+                                     peakPercent: w.peakPercent, lastSeen: w.lastSeen)
+            if let existing = windows[normalised.id] {
+                // Two legacy rows can collapse onto one window; keep the higher peak.
+                if normalised.peakPercent > existing.peakPercent { windows[normalised.id] = normalised }
+            } else {
+                windows[normalised.id] = normalised
+            }
+        }
+        return windows.count != list.count
     }
 
     // Where the file lives, for a "Reveal in Finder" affordance later.

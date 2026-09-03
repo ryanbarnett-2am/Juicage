@@ -22,12 +22,16 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
     private var isReloading = false
     private var reloadTimer: Timer?
 
-    override init() {
+    // Which cookie jar this fetcher signs in against. One per account.
+    private let dataStore: WKWebsiteDataStore
+
+    init(dataStore: WKWebsiteDataStore = .default()) {
+        self.dataStore = dataStore
         // A message handler named "usage" is the mailbox the JS posts into.
         let userContent = WKUserContentController()
 
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = WKWebsiteDataStore.default()  // shares the login cookies
+        config.websiteDataStore = dataStore   // this account's login cookies
         config.userContentController = userContent
 
         let frame = NSRect(x: 0, y: 0, width: 800, height: 600)

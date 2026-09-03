@@ -7,7 +7,10 @@ class UsageViewModel: ObservableObject {
     @Published var workspaces: [WorkspaceUsage] = []
 
     @Published var isLoading = false
-    @Published var needsLogin = false
+    // Accounts waiting on a sign-in. Per-account rather than one flag, because
+    // with several sign-ins one expiring shouldn't make the others look broken.
+    @Published var pendingLogins: [Account] = []
+    var needsLogin: Bool { !pendingLogins.isEmpty }
     @Published var errorMessage: String? = nil
     @Published var claudeStatus: ClaudeStatus = .operational
 
@@ -41,26 +44,13 @@ class UsageViewModel: ObservableObject {
     private let staleAfter: TimeInterval = 15 * 60
 
     func start() {
-        providers = [ClaudeProvider()]
-        for provider in providers {
-            let key = provider.id
-            provider.onUsage = { [weak self] list in
-                DispatchQueue.main.async { self?.apply(list, from: key) }
-            }
-            provider.onNeedsLogin = { [weak self] in
-                DispatchQueue.main.async {
-                    self?.needsLogin = true
-                    self?.isLoading = false
-                }
-            }
-            provider.onError = { [weak self] message in
-                DispatchQueue.main.async {
-                    self?.errorMessage = message   // keep last good numbers on screen
-                    self?.isLoading = false
-                }
-            }
-            provider.start()
-        }
+        buildProviders()
+        // Adding or removing an account rebuilds the provider list in place.
+        AccountStore.shared.$accounts
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.buildProviders() }
+            .store(in: &cancellables)
 
         statusChecker = StatusChecker()
         statusChecker.onStatusReceived = { [weak self] status in
@@ -117,6 +107,57 @@ class UsageViewModel: ObservableObject {
         }
     }
 
+    // One provider per claude.ai sign-in.
+    private func buildProviders() {
+        let existing = Set(providers.compactMap { ($0 as? ClaudeProvider)?.account.id })
+        let wanted = AccountStore.shared.accounts
+
+        // Drop results for accounts that have gone away, or their numbers would
+        // linger in the popover after the account was removed.
+        let wantedIDs = Set(wanted.map { "claude.\($0.id.uuidString)" })
+        resultsByProvider = resultsByProvider.filter { wantedIDs.contains($0.key) }
+        pendingLogins.removeAll { account in !wanted.contains(where: { $0.id == account.id }) }
+
+        for account in wanted where !existing.contains(account.id) {
+            let provider = ClaudeProvider(account: account)
+            let key = provider.id
+            provider.onUsage = { [weak self] list in
+                DispatchQueue.main.async {
+                    self?.pendingLogins.removeAll { $0.id == account.id }
+                    self?.apply(list, from: key)
+                }
+            }
+            provider.onNeedsLogin = { [weak self] in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if !self.pendingLogins.contains(where: { $0.id == account.id }) {
+                        self.pendingLogins.append(account)
+                    }
+                    self.isLoading = false
+                }
+            }
+            provider.onError = { [weak self] message in
+                DispatchQueue.main.async {
+                    self?.errorMessage = message   // keep last good numbers on screen
+                    self?.isLoading = false
+                }
+            }
+            provider.start()
+            providers.append(provider)
+        }
+        providers.removeAll { p in
+            guard let c = p as? ClaudeProvider else { return false }
+            return !wanted.contains { $0.id == c.account.id }
+        }
+        rebuildWorkspaces()
+    }
+
+    // Call after a successful sign-in for one account.
+    func signedIn(_ account: Account) {
+        pendingLogins.removeAll { $0.id == account.id }
+        refresh()
+    }
+
     private func applyLocalPreference(_ enabled: Bool) {
         if enabled {
             localMonitor.start()
@@ -167,8 +208,9 @@ class UsageViewModel: ObservableObject {
         fetchWatchdog = watchdog
     }
 
+    // Kept for the single-account path; multi-account uses signedIn(_:).
     func loggedIn() {
-        needsLogin = false
+        pendingLogins.removeAll()
         refresh()
     }
 
@@ -177,8 +219,12 @@ class UsageViewModel: ObservableObject {
     // workspace ids are provider-prefixed, so histories can't collide.
     private func apply(_ list: [WorkspaceUsage], from providerID: String) {
         resultsByProvider[providerID] = list
-        // Re-flatten in provider order so the list doesn't reshuffle when one
-        // provider happens to answer first.
+        rebuildWorkspaces()
+    }
+
+    // Re-flatten every provider's latest results in provider order, so the list
+    // doesn't reshuffle depending on which one answered first.
+    private func rebuildWorkspaces() {
         let merged = providers.flatMap { resultsByProvider[$0.id] ?? [] }
         workspaces = merged.map { ws in
             var updated = ws
@@ -192,7 +238,6 @@ class UsageViewModel: ObservableObject {
         UsageHistory.shared.record(workspaces)
         NotificationManager.shared.evaluate(workspaces)
         isLoading = false
-        needsLogin = false
         errorMessage = nil
     }
 
