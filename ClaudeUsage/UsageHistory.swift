@@ -49,11 +49,22 @@ final class UsageHistory {
     // Called on every refresh. Upserts the current window for each limit, raising
     // its peak. A metric with no reset time (the API sometimes omits one) can't
     // be attributed to a window, so it's skipped rather than guessed at.
+    // The API returns a window's reset time a second or two apart between
+    // fetches — 15:59:59 on one poll, 16:00:00 on the next. Keyed on the exact
+    // timestamp those become separate windows, so a single week gets counted
+    // repeatedly and "last 8" shows the same week over and over. Snapping to the
+    // minute collapses them; real windows are hours apart, so nothing distinct
+    // can collide.
+    private func canonical(_ date: Date) -> Date {
+        Date(timeIntervalSince1970: (date.timeIntervalSince1970 / 60).rounded() * 60)
+    }
+
     func record(_ workspaces: [WorkspaceUsage], now: Date = Date()) {
         var changed = false
         for workspace in workspaces {
             for metric in workspace.allMetrics {
-                guard let resetAt = metric.resetAt else { continue }
+                guard let rawReset = metric.resetAt else { continue }
+                let resetAt = canonical(rawReset)
                 let window = UsageWindow(providerID: workspace.providerID,
                                          metricKey: metric.key,
                                          resetAt: resetAt,
