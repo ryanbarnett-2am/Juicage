@@ -19,14 +19,20 @@ the source of truth — don't reconstruct intent from conversation.
 the Xcode project with conflicted copies. Stale copies still sit under
 `~/Library/CloudStorage/Dropbox/` — ignore them; they are not the project.
 
-## Three names, all deliberate
+## Three names — one of them frozen, two of them just old
 
-- **Folder, `.xcodeproj`, scheme: `ClaudeUsage`** — the original codename.
-- **Bundle identifier: `twoam.Tally`** — frozen. macOS keys the saved claude.ai
-  sign-in to it, so changing it signs every user out for no visible benefit.
-- **The app: `Juicage`** — the only name a user sees.
-
-Do not "tidy" any of these.
+- **Bundle identifier: `twoam.Tally`** — **frozen, never change it.** macOS keys
+  the saved claude.ai sign-in and the history file to it, and Sparkle keys
+  updates to it. Changing it signs every user out and strands them on their
+  installed version. This is the only name with a real constraint.
+- **The app: `Juicage`** — the only name a user sees. Also the GitHub repo.
+- **Folder, `.xcodeproj`, scheme, target: `ClaudeUsage`** — the original
+  codename, and nothing more than inertia. It is *not* frozen; it's only
+  untouched because renaming an Xcode project is fiddly and nobody has spent
+  the hour. Note the folder doesn't even match the repo, which clones as
+  `Juicage`. Renaming it is welcome — do it as its own commit on `main` with no
+  other change in it, and update `package-release.sh` and `RELEASING.md` in the
+  same pass.
 
 ## Build and release
 
@@ -87,3 +93,23 @@ Ryan is a hobbyist Swift developer — step-by-step, jargon-light. He tests on a
 second Mac and finds real bugs there; take those reports seriously and diagnose
 rather than guess. Show a rendered image before building a visual feature: two
 were built twice for want of one.
+
+## Where things stand (2026-09-04)
+
+`main` is 1.7, which is the newest **released** version. Do not read the clean
+tree as "everything shipped" — it hasn't.
+
+Everything since 1.7 sits in a single WIP commit on `multi-account`
+(`998bd89`), which mixes two unrelated things:
+
+- **Finished and running on Ryan's Mac as 1.8** — the day strip
+  (`DayStripView.swift`), the history bar chart (`UsageHistoryChart.swift`,
+  which replaced `SparklineView.swift`), and two further de-dup fixes in
+  `UsageHistory.swift` (canonicalise on *load*, and persist the merge — the
+  commit on `main` only canonicalises on write).
+- **Half-built** — multi-account (`Account.swift`), which has no Preferences UI
+  and so cannot be used. That's issue #1.
+
+So 1.8 is shippable but welded to a feature that isn't. **First job: split that
+commit** — cherry-pick the day strip, chart and de-dup work onto `main`, release
+it, and leave `multi-account` holding only the account work.
