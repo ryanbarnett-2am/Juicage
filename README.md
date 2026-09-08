@@ -43,14 +43,25 @@ Requires **macOS 13 (Ventura) or later**. Universal (Apple Silicon and Intel).
 - **Detail popover** — per-workspace bars for the current session, the weekly
   all-models cap, and each per-model cap (e.g. Fable) your account has. Every
   workspace your login belongs to is shown.
-- **Pace forecast** — projects your average burn rate forward and reports, in
-  time, whether you're **ahead** ("on pace with ~3h 40m to spare") or **behind**
-  ("on pace to hit limit ~2h 15m early"). Early in a window, when there isn't
-  enough usage to project honestly, it says **"Calculating pace…"** instead of
-  guessing — which keeps the first expensive prompt of a session from setting
-  off a false alarm.
+- **Pace forecast** — projects your burn rate forward and answers in clock
+  time: **"At this pace you'll run out around 5:10 PM"** when you're heading for
+  a wall, or **"At this pace you're good through the reset (~16% used)"** when
+  you aren't. Early in a window, when there isn't enough usage to project
+  honestly, it says **"Calculating pace…"** instead of guessing — which keeps
+  the first expensive prompt of a session from setting off a false alarm.
 - **Extra usage** — with pay-as-you-go enabled, shows real spend against your
   cap: "$0.12 of $5.00 · $4.88 left".
+- **When the window opened** — a session window is a rolling five hours anchored
+  to whenever it opened, not a fixed clock, so the popover shows both ends:
+  "Opened 12:10 PM · resets 5:10 PM". Start work an hour before one closes and
+  you get an hour of it, not five.
+- **Today's sessions** — a strip showing when each of today's session windows
+  opened and closed, on a midnight-to-midnight axis with a line marking now.
+- **Usage history** — one bar per closed window under each limit, with a faint
+  full-height slot behind it so you can see what you left unused. Windows you
+  maxed out draw red, and the caption says which question it's answering:
+  "last 8 · maxed 3×" or "last 11 · ~83% unused". Recorded locally; nothing
+  leaves your Mac.
 - **Service status** — during a claude.ai outage the rings give way to a
   red/orange dot and a banner naming the issue.
 
