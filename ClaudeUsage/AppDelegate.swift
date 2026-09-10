@@ -11,6 +11,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var cancellables = Set<AnyCancellable>()
     private var labelTimer: Timer?
 
+    // Sparkle quits the app to swap the bundle, and a normal Quit is no
+    // different. Either way the last few seconds of history are still sitting
+    // in a pending write, so force it out before we go.
+    func applicationWillTerminate(_ notification: Notification) {
+        UsageHistory.shared.flush()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         #if DEBUG

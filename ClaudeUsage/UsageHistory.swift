@@ -164,6 +164,16 @@ final class UsageHistory {
         }
     }
 
+    // Write now, without waiting for the coalescing delay.
+    //
+    // scheduleSave() batches writes two seconds out, so anything that quits the
+    // app inside that window drops the pending record — and Sparkle quits the
+    // app deliberately to install an update. History is the one thing here that
+    // cannot be rebuilt, so an update must never be able to eat the tail of it.
+    func flush() {
+        queue.sync { save() }
+    }
+
     private func save() {
         let snapshot = Array(windows.values).sorted { $0.resetAt < $1.resetAt }
         let encoder = JSONEncoder()
