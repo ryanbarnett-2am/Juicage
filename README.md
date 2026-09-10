@@ -26,6 +26,12 @@ quietly in the background and refreshes on its own.
 > working at any time. Use at your own discretion and in line with Anthropic's
 > Terms of Service.
 
+> **Why you'll see "Tally" in file paths.** Juicage was called Tally until v1.5.
+> The bundle identifier stayed `twoam.Tally` on purpose — macOS keys your saved
+> sign-in and settings to it, so renaming it would sign every existing user out.
+> That's why the app stores things under `~/Library/*/twoam.Tally/`. Nothing is
+> sent anywhere; it's all local.
+
 ## Install
 
 ```sh

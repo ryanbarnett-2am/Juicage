@@ -18,7 +18,42 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         UsageHistory.shared.flush()
     }
 
+    // Reclaim the container left behind when the App Sandbox was removed.
+    //
+    // Sandboxed builds kept everything under ~/Library/Containers/<bundle id>.
+    // Turning the sandbox off (needed to read Ollama's log and run `lms`) moved
+    // all of that to the normal locations and stranded the old copy — half a
+    // gigabyte on a machine that had been running Juicage since July, which
+    // nothing will ever read again.
+    //
+    // Guarded on actually being unsandboxed: build with ENABLE_APP_SANDBOX=YES
+    // and that directory is the live home folder, so deleting it would destroy
+    // the running app's own data.
+    private func reclaimOrphanedContainer() {
+        guard !NSHomeDirectory().contains("/Library/Containers/") else { return }
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+
+        let key = "didReclaimSandboxContainer"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        let container = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Containers/\(bundleID)", isDirectory: true)
+
+        DispatchQueue.global(qos: .utility).async {
+            defer { UserDefaults.standard.set(true, forKey: key) }
+            guard FileManager.default.fileExists(atPath: container.path) else { return }
+            do {
+                try FileManager.default.removeItem(at: container)
+                dlog("Reclaimed orphaned sandbox container")
+            } catch {
+                dlog("Could not reclaim container: \(error.localizedDescription)")
+            }
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        reclaimOrphanedContainer()
+
         NSApp.setActivationPolicy(.accessory)
         #if DEBUG
         UsageParser.runSelfTest()
