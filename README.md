@@ -10,6 +10,15 @@ you go and a forecast of whether you're on pace to hit a limit. It also shows
 when a **local** model (Ollama or LM Studio) is working. No dock icon; it runs
 quietly in the background and refreshes on its own.
 
+<p align="center">
+  <img src="docs/images/popover.png" width="320"
+       alt="The Juicage popover: a current session at 3% with a pace forecast, a
+            weekly all-models bar, a Fable bar at 31% forecast in red to run out
+            tomorrow evening, a history chart of the last 12 windows with one
+            maxed out, a strip of today's session windows, and a row showing a
+            local model working.">
+</p>
+
 > **Unofficial.** Juicage is not affiliated with, endorsed by, or supported by
 > Anthropic. "Claude" is a trademark of Anthropic; it's used here only to
 > describe what the app works with. Juicage reads usage data from claude.ai's own
