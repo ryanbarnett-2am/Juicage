@@ -19,6 +19,14 @@ ln -s /Applications "$STAGE/Applications"
 
 # Read/write image first — Finder can only style a mounted, writable volume.
 RW="$TMP/rw.dmg"
+# Detach any stale volume of this name first. macOS would otherwise mount the
+# new image as "Juicage 1", and the Finder layout below — which addresses the
+# volume by name — would decorate the wrong disk or fail outright. Leftovers are
+# easy to create simply by inspecting a previous release's DMG.
+for stale in "/Volumes/$VOL" "/Volumes/$VOL "*; do
+  [ -d "$stale" ] && hdiutil detach "$stale" -force -quiet 2>/dev/null || true
+done
+
 hdiutil create -volname "$VOL" -srcfolder "$STAGE" -ov -format UDRW -quiet "$RW"
 MNT="$(hdiutil attach "$RW" -nobrowse -noverify | tail -1 | awk '{print $NF}')"
 
