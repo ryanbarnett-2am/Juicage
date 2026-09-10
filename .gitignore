@@ -29,3 +29,6 @@ Packages/
 # Local idea backlog — deliberately not published
 IDEAS.md
 .history-backup-*/
+
+# Working notes for Claude Code — local only, not documentation
+CLAUDE.md
