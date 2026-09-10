@@ -18,9 +18,24 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
     var onNeedsLogin: (() -> Void)?
     var onError: ((String) -> Void)?
 
+    // Drop cached responses, keeping everything that holds the session.
+    private func purgeCaches() {
+        let caches: Set<String> = [
+            WKWebsiteDataTypeDiskCache,
+            WKWebsiteDataTypeMemoryCache,
+            WKWebsiteDataTypeFetchCache,
+            WKWebsiteDataTypeOfflineWebApplicationCache,
+        ]
+        WKWebsiteDataStore.default().removeData(ofTypes: caches,
+                                                modifiedSince: .distantPast) {
+            dlog("Purged web caches")
+        }
+    }
+
     private var pageReady = false
     private var isReloading = false
     private var reloadTimer: Timer?
+    private var cachePurgeTimer: Timer?
 
     override init() {
         // A message handler named "usage" is the mailbox the JS posts into.
@@ -51,6 +66,21 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
 
         userContent.add(self, name: "usage")
         webView.navigationDelegate = self
+
+        // Keep the cache from growing without limit.
+        //
+        // The web view is parked on claude.ai for the life of the app, so every
+        // asset the page pulls is cached and nothing ever evicts it. Left alone
+        // this reaches a gigabyte — absurd for something that displays a
+        // percentage, and alarming to anyone who inspects the app.
+        //
+        // Only the pure caches go. Cookies, local storage and IndexedDB carry
+        // the login, and clearing those would sign the user out.
+        purgeCaches()
+        cachePurgeTimer = Timer(timeInterval: 6 * 3600, repeats: true) { [weak self] _ in
+            self?.purgeCaches()
+        }
+        RunLoop.main.add(cachePurgeTimer!, forMode: .common)
 
         // Park on the claude.ai origin once; after that we just re-run the API
         // call. Any claude.ai URL works — we only need the origin + cookies.
