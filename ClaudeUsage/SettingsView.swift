@@ -4,7 +4,20 @@ import SwiftUI
 // change is saved and picked up live by the rest of the app.
 struct SettingsView: View {
     @ObservedObject private var prefs = Preferences.shared
+    @EnvironmentObject private var viewModel: UsageViewModel
     @State private var launchAtLogin = LoginItem.isEnabled
+
+    // Ticking one of the menu bar limits on or off. Stored as a list of metric
+    // keys rather than a fixed set of switches, so a cap we've never heard of
+    // still gets a working checkbox the day the account grows one.
+    private func shown(_ key: String) -> Binding<Bool> {
+        Binding(get: { prefs.menuBarMetrics.contains(key) },
+                set: { on in
+                    var keys = prefs.menuBarMetrics.filter { $0 != key }
+                    if on { keys.append(key) }
+                    prefs.menuBarMetrics = keys
+                })
+    }
 
     var body: some View {
         Form {
@@ -20,7 +33,27 @@ struct SettingsView: View {
             }
 
             Section("Display") {
-                Toggle("Show percentage next to the ring", isOn: $prefs.showMenuBarText)
+                Toggle("Show percentages next to the ring", isOn: $prefs.showMenuBarText)
+                // Which limits those percentages are. The list is whatever your
+                // account actually reports, so per-model caps show up on their own.
+                ForEach(viewModel.menuBarChoices) { metric in
+                    Toggle(metric.label, isOn: shown(metric.key))
+                        .disabled(!prefs.showMenuBarText)
+                        .padding(.leading, 18)
+                }
+                if viewModel.menuBarChoices.isEmpty {
+                    Text("Your limits appear here once usage has loaded.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                // Three named limits is a wide menu bar, and a 14-inch screen
+                // hasn't got it to spare — so the names can shrink to initials
+                // or disappear entirely.
+                Picker("Show limits as", selection: $prefs.menuBarLabelStyle) {
+                    ForEach(MenuBarLabelStyle.allCases) { style in
+                        Text(style.menuTitle).tag(style)
+                    }
+                }
+                .disabled(!prefs.showMenuBarText)
                 Picker("Show times as", selection: $prefs.showEndTimes) {
                     Text("End time — 1:00 PM").tag(true)
                     Text("Time remaining — 3h 56m").tag(false)

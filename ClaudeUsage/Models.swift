@@ -22,6 +22,59 @@ struct UsageMetric: Identifiable, Equatable {
     var forecast: ForecastVerdict = .unknown
 
     var id: String { key }
+
+    // Menu bar space is charged by the pixel, so the two fixed limits get
+    // shortened. Per-model caps ("Fable") are already short enough to keep.
+    var shortLabel: String {
+        switch key {
+        case "session":    return "Session"
+        case "weekly_all": return "Week"
+        default:           return label
+        }
+    }
+
+    // One letter, for when even "Session" is too wide. C is for the current
+    // session and W for the week; a per-model cap uses its own first letter.
+    var initialLabel: String {
+        switch key {
+        case "session":    return "C"
+        case "weekly_all": return "W"
+        default:           return String(label.prefix(1)).uppercased()
+        }
+    }
+
+    // How this limit reads in the menu bar under a given label style.
+    func menuBarText(_ style: MenuBarLabelStyle) -> String {
+        switch style {
+        case .full:    return "\(shortLabel) \(percent)%"
+        case .initial: return "\(initialLabel):\(percent)%"
+        case .off:     return "\(percent)%"
+        }
+    }
+}
+
+// How much of a name each percentage carries in the menu bar. The whole reason
+// this is adjustable is that a 14-inch screen runs out of menu bar long before
+// a 27-inch one does (#12).
+enum MenuBarLabelStyle: String, CaseIterable, Identifiable {
+    case full       // "Session 31% · Week 35% · Fable 66%"
+    case initial    // "C:31% W:35% F:66%"
+    case off        // "31% · 35% · 66%"
+
+    var id: String { rawValue }
+
+    // Initials carry their own delimiter, so they don't need dots between them.
+    var separator: String { self == .initial ? " " : " · " }
+
+    // Shown in the Preferences picker — each option is its own example. Kept to
+    // one example because the popup ellipsizes anything longer.
+    var menuTitle: String {
+        switch self {
+        case .full:    return "Names — Session 31%"
+        case .initial: return "Initials — C:31%"
+        case .off:     return "Percent only — 31%"
+        }
+    }
 }
 
 // A snapshot of one workspace's whole usage picture.

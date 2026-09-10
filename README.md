@@ -49,6 +49,13 @@ Requires **macOS 13 (Ventura) or later**. Universal (Apple Silicon and Intel).
   alongside a maxed-out week reads as neutral + red instead of both going red.
 - **Three color tiers** — blue (on pace) → orange (getting close) → red (over
   pace, or very high), so there's a heads-up rather than a jump straight to red.
+- **Pick what the menu bar counts** — the percentages beside the ring show the
+  current session by default. Preferences lets you tick any combination of the
+  limits your account actually has — the weekly all-models cap, a per-model cap
+  like Fable — and each is labelled once there's more than one: **"Session 42% ·
+  Week 71%"**. Three named limits is a wide menu bar and a 14-inch screen
+  hasn't got it to spare, so the names can shrink to initials — **"C:42% W:71%
+  F:12%"** — or go entirely: **"42% · 71% · 12%"**.
 - **Detail popover** — per-workspace bars for the current session, the weekly
   all-models cap, and each per-model cap (e.g. Fable) your account has. Every
   workspace your login belongs to is shown.
