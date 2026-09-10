@@ -347,7 +347,13 @@ struct UsageRowView: View {
             let past = history
             if past.count >= 2 {
                 HStack(spacing: 6) {
-                    UsageHistoryChart(values: past, color: barColor)
+                    // Deliberately NOT barColor. That's the metric's *live*
+                    // severity, so a session forecast to run out repainted every
+                    // past window red — including windows that finished at 20%.
+                    // History is a record of what happened, not a reflection of
+                    // what's happening now, and red has to mean exactly one
+                    // thing: this window hit the cap.
+                    UsageHistoryChart(values: past, color: .accentColor)
                         .frame(height: 18)
                     Text(historyCaption(past))
                         .font(.caption2)
