@@ -226,9 +226,20 @@ enum DateUtils {
     }
 
     // Menu-bar-sized clock: "1:00p" — about as wide as "3h56m".
+    // A date format in the user's own convention.
+    //
+    // "j" is the skeleton symbol for "hour, however this region writes it" —
+    // 12-hour with AM/PM in the US, 24-hour across most of Europe and Asia.
+    // Hardcoding "h:mm a" forced American style on everyone regardless of their
+    // system setting, which macOS already knows.
+    static func localizedFormat(_ template: String) -> String {
+        DateFormatter.dateFormat(fromTemplate: template, options: 0, locale: .current)
+            ?? template
+    }
+
     static func shortClock(_ date: Date) -> String {
         let f = DateFormatter()
-        f.dateFormat = "h:mma"
+        f.dateFormat = localizedFormat("jmm")
         return f.string(from: date).replacingOccurrences(of: "AM", with: "a")
                                    .replacingOccurrences(of: "PM", with: "p")
     }
@@ -242,7 +253,7 @@ enum DateUtils {
     static func clockTime(_ date: Date, now: Date = Date()) -> String {
         let cal = Calendar.current
         let f = DateFormatter()
-        f.dateFormat = "h:mm a"
+        f.dateFormat = localizedFormat("jmm")
         let time = f.string(from: date)
         if cal.isDate(date, inSameDayAs: now) { return time }
         if let tomorrow = cal.date(byAdding: .day, value: 1, to: now),
@@ -254,9 +265,9 @@ enum DateUtils {
     static func resetDate(_ date: Date, now: Date = Date()) -> String {
         let f = DateFormatter()
         if Calendar.current.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
-            f.dateFormat = "EEE h:mm a"
+            f.dateFormat = localizedFormat("EEEjmm")
         } else {
-            f.dateFormat = "MMM d, h:mm a"
+            f.dateFormat = localizedFormat("MMMdjmm")
         }
         return f.string(from: date)
     }
