@@ -38,6 +38,7 @@ fi
 
 echo "Building Release…"
 rm -rf "$BUILD"
+mkdir -p "$BUILD"   # the build log is written here, so it must exist first
 # CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO keeps the debug-only
 # com.apple.security.get-task-allow entitlement out of the build. Notarization
 # rejects any binary carrying it, and Xcode injects it by default.
@@ -46,7 +47,15 @@ rm -rf "$BUILD"
   -destination 'generic/platform=macOS' \
   "${SIGN_ARGS[@]}" \
   CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
-  build >/dev/null
+  build >"$BUILD/build.log" 2>&1 || {
+    # Keep the log and surface the actual reason. Signing reaches out to Apple's
+    # timestamp authority for every signature, and when that call fails the only
+    # clue — "A timestamp was expected but was not found" — is buried in output
+    # that used to go to /dev/null, leaving just "BUILD FAILED" with no cause.
+    echo "Build failed. Last 30 lines of $BUILD/build.log:" >&2
+    grep -iE "error|failed|expected but" "$BUILD/build.log" | tail -30 >&2
+    exit 1
+  }
 
 # Sparkle ships its own pre-signed helpers — Updater.app, Autoupdate and two XPC
 # services — nested inside the framework. Xcode signs our app and the framework

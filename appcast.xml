@@ -7,12 +7,12 @@
     <language>en</language>
     <item>
       <title>1.8</title>
-      <pubDate>Tue, 08 Sep 2026 18:09:50 +0000</pubDate>
+      <pubDate>Thu, 10 Sep 2026 02:08:09 +0000</pubDate>
       <sparkle:version>1.8</sparkle:version>
       <sparkle:shortVersionString>1.8</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
       <sparkle:releaseNotesLink>https://github.com/ryanbarnett-2am/Juicage/releases/tag/v1.8</sparkle:releaseNotesLink>
-      <enclosure url="https://github.com/ryanbarnett-2am/Juicage/releases/download/v1.8/Juicage-1.8.zip" sparkle:edSignature="yuvORWefZ2rVpJkAn4z5xMYg2w0dkrzc0t/+/YVoTy3I5pRcprSgIcwVAenxwh7jkDHv+dfmypgxfDTiZkqeCQ==" length="1985032" type="application/octet-stream"/>
+      <enclosure url="https://github.com/ryanbarnett-2am/Juicage/releases/download/v1.8/Juicage-1.8.zip" sparkle:edSignature="WZbv14gjG1+hi2GxI3LJvH9N/YnaF5GGVBefrhoKYEKBW+UV6tuLxiWg50uNoDKpR/jlDEMOtGGGiQZSSXSsBw==" length="1986374" type="application/octet-stream"/>
     </item>
     <item>
       <title>1.7</title>
