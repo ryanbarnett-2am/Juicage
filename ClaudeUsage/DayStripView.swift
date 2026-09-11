@@ -23,11 +23,17 @@ struct DayStripView: View {
         return CGFloat(min(max(fraction, 0), 1)) * width
     }
 
+    // A tick label on a strip this narrow has room for about three characters,
+    // so the locale's full rendering won't do — "6 PM", "17 Uhr" and "17時" all
+    // overflow. Follow the region's convention but compress it: "6a"/"6p" where
+    // AM/PM is used, a plain 24-hour number everywhere else.
     private func hourLabel(_ hour: Int) -> String {
-        let f = DateFormatter(); f.dateFormat = "ha"
-        return f.string(from: dayStart.addingTimeInterval(Double(hour) * 3600))
-            .replacingOccurrences(of: "AM", with: "a")
-            .replacingOccurrences(of: "PM", with: "p")
+        let h = hour % 24
+        guard DateUtils.localizedFormat("j").contains("a") else {
+            return String(format: "%02d", h)
+        }
+        let hour12 = h % 12 == 0 ? 12 : h % 12
+        return "\(hour12)\(h < 12 ? "a" : "p")"
     }
 
     var body: some View {

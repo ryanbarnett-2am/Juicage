@@ -86,6 +86,10 @@ Requires **macOS 13 (Ventura) or later**. Universal (Apple Silicon and Intel).
   leaves your Mac.
 - **Service status** — during a claude.ai outage the rings give way to a
   red/orange dot and a banner naming the issue.
+- **Rings-only mode** — turn off *Show text in menu bar* in Preferences and just
+  the rings remain, for anyone short on menu bar space (notched Macs especially).
+- **Follows your region's time format** — 12-hour with AM/PM or 24-hour,
+  according to your macOS setting rather than a hardcoded style.
 
 ### Local models (Ollama / LM Studio)
 
