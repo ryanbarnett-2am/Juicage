@@ -7,6 +7,11 @@ struct SettingsView: View {
     @EnvironmentObject private var viewModel: UsageViewModel
     @State private var launchAtLogin = LoginItem.isEnabled
 
+    // 13:00 today, purely to show the user's own time format in the picker.
+    private var sampleTime: Date {
+        Calendar.current.date(bySettingHour: 13, minute: 0, second: 0, of: Date()) ?? Date()
+    }
+
     // Ticking one of the menu bar limits on or off. Stored as a list of metric
     // keys rather than a fixed set of switches, so a cap we've never heard of
     // still gets a working checkbox the day the account grows one.
@@ -21,6 +26,8 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            AccountsSection()
+
             Section("Refresh") {
                 Stepper("Check every \(prefs.refreshMinutes) min",
                         value: $prefs.refreshMinutes, in: 1...30)
@@ -55,7 +62,7 @@ struct SettingsView: View {
                 }
                 .disabled(!prefs.showMenuBarText)
                 Picker("Show times as", selection: $prefs.showEndTimes) {
-                    Text("End time — 1:00 PM").tag(true)
+                    Text("End time — \(DateUtils.clockTime(sampleTime))").tag(true)
                     Text("Time remaining — 3h 56m").tag(false)
                 }
             }
@@ -78,6 +85,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 380, height: 520)
+        .frame(width: 400, height: 620)
     }
 }

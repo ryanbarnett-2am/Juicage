@@ -2,6 +2,9 @@ import SwiftUI
 import WebKit
 
 struct LoginView: View {
+    // The account's cookie jar. Signing in against the shared store would just
+    // replace whichever account was already there.
+    var dataStore: WKWebsiteDataStore = .default()
     let onLoggedIn: () -> Void
     @State private var showContinue = false
 
@@ -28,7 +31,7 @@ struct LoginView: View {
 
             Divider()
 
-            LoginWebView(onLoggedIn: onLoggedIn, onShowContinue: {
+            LoginWebView(dataStore: dataStore, onLoggedIn: onLoggedIn, onShowContinue: {
                 showContinue = true
             })
         }
@@ -36,11 +39,14 @@ struct LoginView: View {
 }
 
 struct LoginWebView: NSViewRepresentable {
+    var dataStore: WKWebsiteDataStore = .default()
     let onLoggedIn: () -> Void
     let onShowContinue: () -> Void
 
     func makeNSView(context: Context) -> WKWebView {
-        let webView = WKWebView()
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = dataStore
+        let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.load(URLRequest(url: URL(string: "https://claude.ai/login")!))
         return webView

@@ -31,8 +31,15 @@ protocol UsageProvider: AnyObject {
 // knowledge stays in UsageFetcher and UsageParser; this is only the adapter that
 // makes it look like any other provider.
 final class ClaudeProvider: UsageProvider {
-    let id = "claude"
-    let displayName = "Claude"
+    // var, not let: renaming an account has to reach the provider, or the
+    // popover keeps labelling its block with the old name until relaunch.
+    var account: Account
+    // Provider ids are per-account, so two sign-ins can't collide in the
+    // history store or in the popover's list identity.
+    var id: String { "claude.\(account.id.uuidString)" }
+    var displayName: String { account.name }
+
+    init(account: Account) { self.account = account }
 
     var onUsage: (([WorkspaceUsage]) -> Void)?
     var onNeedsLogin: (() -> Void)?
@@ -42,7 +49,7 @@ final class ClaudeProvider: UsageProvider {
 
     func start() {
         guard fetcher == nil else { return }
-        let fetcher = UsageFetcher()
+        let fetcher = UsageFetcher(dataStore: AccountStore.dataStore(for: account))
 
         fetcher.onWorkspacesReceived = { [weak self] list in
             guard let self else { return }
