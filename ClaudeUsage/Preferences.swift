@@ -17,6 +17,12 @@ final class Preferences: ObservableObject {
     // "weekly_all", "weekly_scoped:Fable"). Stored order is ignored — the menu
     // bar always draws them in the same order the popover does.
     @Published var menuBarMetrics: [String] { didSet { defaults.set(menuBarMetrics, forKey: "menuBarMetrics") } }
+    // Which limits get a ring, by metric key. Order here is ignored — rings are
+    // drawn outermost-first in the same order the popover lists them, so the
+    // outer ring keeps meaning what it has always meant. Capped at three: a
+    // fourth has too little circumference left to read as an arc.
+    @Published var menuBarRings: [String] { didSet { defaults.set(menuBarRings, forKey: "menuBarRings") } }
+
     // How much name each of those percentages carries — full, one letter, or none.
     @Published var menuBarLabelStyle: MenuBarLabelStyle {
         didSet { defaults.set(menuBarLabelStyle.rawValue, forKey: "menuBarLabelStyle") }
@@ -41,6 +47,7 @@ final class Preferences: ObservableObject {
             "notifyForecast": true,
             "showMenuBarText": true,
             "menuBarMetrics": ["session"],
+            "menuBarRings": ["session", "weekly_all"],   // exactly today's icon
             "menuBarLabelStyle": MenuBarLabelStyle.full.rawValue,
             "showEndTimes": true,
             "watchLocalLLMs": true,
@@ -48,6 +55,7 @@ final class Preferences: ObservableObject {
             "showLocalTitles": true,
         ])
         // didSet does not fire during init, so these don't re-write the defaults.
+        menuBarRings    = defaults.stringArray(forKey: "menuBarRings") ?? ["session", "weekly_all"]
         refreshMinutes  = defaults.integer(forKey: "refreshMinutes")
         notifyAt80      = defaults.bool(forKey: "notifyAt80")
         notifyAt100     = defaults.bool(forKey: "notifyAt100")

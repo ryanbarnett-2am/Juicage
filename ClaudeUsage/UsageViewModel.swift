@@ -284,6 +284,28 @@ class UsageViewModel: ObservableObject {
         return workspaces.flatMap(\.allMetrics).filter { seen.insert($0.key).inserted }
     }
 
+    // The rings to draw, outermost first.
+    //
+    // Ordered by menuBarChoices (the popover's order) rather than by however the
+    // preference happens to be stored, so the outer ring keeps meaning what it
+    // always has and ticking a per-model cap adds a ring inside rather than
+    // shuffling the others. Worst severity across workspaces, matching the
+    // numbers the popover shows.
+    var menuBarRings: [ProgressRingImage.Ring] {
+        let wanted = Set(Preferences.shared.menuBarRings)
+        return menuBarChoices
+            .filter { wanted.contains($0.key) }
+            .prefix(3)
+            .map { choice in
+                let matching = workspaces.flatMap(\.allMetrics).filter { $0.key == choice.key }
+                let percent = matching.compactMap(\.percent).max()
+                let worst = matching
+                    .map { severity(percent: $0.percent, forecast: $0.forecast) }
+                    .max() ?? .ok
+                return ProgressRingImage.Ring(percent: percent, severity: worst)
+            }
+    }
+
     // True if any limit anywhere is on pace to hit its cap — drives the ⚠ text.
     var isAnyAlerting: Bool {
         workspaces.contains { ws in ws.allMetrics.contains { $0.forecast.isAlerting } }

@@ -167,7 +167,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             button.title = text
         }
-        button.image = ringOrStatusImage()
+        button.image = ringImage()
         button.imagePosition = .imageLeft
 
         // Dim the whole item when the data hasn't refreshed in a while, so old
@@ -186,15 +186,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         return out
     }
 
-    // The ring, unless Claude is down — then show the outage dot instead.
-    private func ringOrStatusImage() -> NSImage {
-        if !viewModel.claudeStatus.isHealthy {
-            return statusDotImage(for: viewModel.claudeStatus)
-        }
-        return ProgressRingImage.make(session: viewModel.ringPercent,
-                                      sessionSeverity: viewModel.sessionSeverity,
-                                      weekly: viewModel.weeklyRingPercent,
-                                      weeklySeverity: viewModel.weeklySeverity)
+    // The rings, with a corner badge when claude.ai is unwell.
+    //
+    // This used to replace the rings with a status dot, which threw away the
+    // number you still needed — degraded service doesn't stop you spending, and
+    // that's precisely when you want to see where you stand.
+    private func ringImage() -> NSImage {
+        ProgressRingImage.make(rings: viewModel.menuBarRings,
+                               status: viewModel.claudeStatus)
     }
 
     private func statusDotImage(for status: ClaudeStatus) -> NSImage {
