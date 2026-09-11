@@ -7,29 +7,18 @@ struct PopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // Header
-            HStack {
-                Text("Juicage").font(.headline)
-                Spacer()
-                if viewModel.isLoading {
-                    ProgressView().scaleEffect(0.6)
-                } else {
-                    Button { viewModel.refresh() } label: {
-                        Image(systemName: "arrow.clockwise").font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            // No title row. You know which app you just clicked, and in a
+            // popover this tall the app's own name is the least useful line in
+            // it — more so once several accounts each carry their own heading.
+            // Refresh moved to the footer, next to the freshness it acts on.
 
+            // The divider belongs to the banner, not to the top of the window —
+            // without the old title row above it, an unconditional one drew a
+            // stray line against the popover's own edge.
             if !viewModel.claudeStatus.isHealthy {
                 StatusBannerView(status: viewModel.claudeStatus)
+                Divider()
             }
-
-            Divider()
 
             content
                 .padding(.horizontal, 16)
@@ -67,6 +56,18 @@ struct PopoverView: View {
                 Text(footerText)
                     .font(.caption2)
                     .foregroundStyle(viewModel.isStale ? Color.orange : Color.secondary.opacity(0.6))
+                // Refresh sits with "Updated 2 min ago" because that is the
+                // thing it changes.
+                if viewModel.isLoading {
+                    ProgressView().scaleEffect(0.5)
+                } else {
+                    Button { viewModel.refresh() } label: {
+                        Image(systemName: "arrow.clockwise").font(.caption2)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help("Refresh now")
+                }
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }
                     .font(.caption)
