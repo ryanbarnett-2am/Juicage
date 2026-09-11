@@ -88,7 +88,7 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
 
         // Park on the claude.ai origin once; after that we just re-run the API
         // call. Any claude.ai URL works — we only need the origin + cookies.
-        webView.load(URLRequest(url: URL(string: "https://claude.ai/")!))
+        parkPage()
 
         // Reload the parked page every 30 minutes so the login session stays
         // fresh over long uptimes. Added in `.common` mode for the same reason
@@ -118,12 +118,31 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
         }
     }
 
-    // Reloads the parked page (used by the 30-min timer and by fetch() recovery).
+    // Establishes the claude.ai origin without loading claude.ai.
+    //
+    // The injected script only issues same-origin fetches with relative paths,
+    // so all the web view needs is a document whose origin is claude.ai — it
+    // never touches the page itself. Loading the real site booted the entire
+    // Claude web app and kept it resident for the life of the process: 656 MB
+    // in the WebContent helper on a Mac that had been running two days, to
+    // make two API calls every few minutes.
+    //
+    // A simulated response gives the same origin, and therefore the same
+    // cookies, with an empty document.
+    private func parkPage() {
+        let url = URL(string: "https://claude.ai/")!
+        webView.loadSimulatedRequest(URLRequest(url: url),
+                                     responseHTML: "<!doctype html><html><body></body></html>")
+    }
+
+    // Re-parks the page (used by the 30-min timer and by fetch() recovery).
+    // Re-issuing the simulated request rather than reload(), which has nothing
+    // to re-fetch for a synthesised document.
     private func reloadPage() {
         guard !isReloading else { return }
         isReloading = true
         pageReady = false
-        webView.reload()
+        parkPage()
     }
 
     // MARK: - WKNavigationDelegate
