@@ -214,6 +214,14 @@ class UsageViewModel: ObservableObject {
         workspaces.compactMap { $0.weeklyAll?.percent }.max()
     }
 
+    // Every limit currently reported, de-duplicated across workspaces and in the
+    // order the popover draws them: the menu of what the menu bar can be told to
+    // show. Per-model caps appear here as soon as the account has one.
+    var menuBarChoices: [UsageMetric] {
+        var seen = Set<String>()
+        return workspaces.flatMap(\.allMetrics).filter { seen.insert($0.key).inserted }
+    }
+
     // True if any limit anywhere is on pace to hit its cap — drives the ⚠ text.
     var isAnyAlerting: Bool {
         workspaces.contains { ws in ws.allMetrics.contains { $0.forecast.isAlerting } }

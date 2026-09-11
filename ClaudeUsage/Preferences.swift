@@ -13,6 +13,14 @@ final class Preferences: ObservableObject {
     @Published var notifyAt100: Bool    { didSet { defaults.set(notifyAt100, forKey: "notifyAt100") } }
     @Published var notifyForecast: Bool { didSet { defaults.set(notifyForecast, forKey: "notifyForecast") } }
     @Published var showMenuBarText: Bool { didSet { defaults.set(showMenuBarText, forKey: "showMenuBarText") } }
+    // Which limits appear as text in the menu bar, by metric key ("session",
+    // "weekly_all", "weekly_scoped:Fable"). Stored order is ignored — the menu
+    // bar always draws them in the same order the popover does.
+    @Published var menuBarMetrics: [String] { didSet { defaults.set(menuBarMetrics, forKey: "menuBarMetrics") } }
+    // How much name each of those percentages carries — full, one letter, or none.
+    @Published var menuBarLabelStyle: MenuBarLabelStyle {
+        didSet { defaults.set(menuBarLabelStyle.rawValue, forKey: "menuBarLabelStyle") }
+    }
     // true  -> "Resets at 1:00 PM"  (plan against the clock)
     // false -> "Resets in 3h"       (plan against a duration)
     @Published var showEndTimes: Bool { didSet { defaults.set(showEndTimes, forKey: "showEndTimes") } }
@@ -32,6 +40,8 @@ final class Preferences: ObservableObject {
             "notifyAt100": true,
             "notifyForecast": true,
             "showMenuBarText": true,
+            "menuBarMetrics": ["session"],
+            "menuBarLabelStyle": MenuBarLabelStyle.full.rawValue,
             "showEndTimes": true,
             "watchLocalLLMs": true,
             "notifyLocalDone": true,
@@ -43,6 +53,8 @@ final class Preferences: ObservableObject {
         notifyAt100     = defaults.bool(forKey: "notifyAt100")
         notifyForecast  = defaults.bool(forKey: "notifyForecast")
         showMenuBarText = defaults.bool(forKey: "showMenuBarText")
+        menuBarMetrics  = defaults.stringArray(forKey: "menuBarMetrics") ?? ["session"]
+        menuBarLabelStyle = MenuBarLabelStyle(rawValue: defaults.string(forKey: "menuBarLabelStyle") ?? "") ?? .full
         showEndTimes    = defaults.bool(forKey: "showEndTimes")
         watchLocalLLMs  = defaults.bool(forKey: "watchLocalLLMs")
         notifyLocalDone = defaults.bool(forKey: "notifyLocalDone")
