@@ -90,6 +90,7 @@ private struct AccountRow: View {
     var body: some View {
         HStack(spacing: 8) {
             TextField("Name", text: $draft)
+                .labelsHidden()          // inside a Form the label otherwise renders as a column: "Name  Claude"
                 .textFieldStyle(.plain)
                 .focused($focused)
                 .onSubmit(commit)
