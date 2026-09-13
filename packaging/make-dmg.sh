@@ -28,7 +28,16 @@ for stale in "/Volumes/$VOL" "/Volumes/$VOL "*; do
 done
 
 hdiutil create -volname "$VOL" -srcfolder "$STAGE" -ov -format UDRW -quiet "$RW"
-MNT="$(hdiutil attach "$RW" -nobrowse -noverify | tail -1 | awk '{print $NF}')"
+# Take the mount point by its path, not by position. hdiutil doesn't always
+# print the volume line last — sometimes the final line is the partition, whose
+# last word is "Apple_APFS" — and a name with a space ("Juicage 1") breaks
+# splitting on whitespace too. Either way detach was handed a bogus path and the
+# build failed after notarization had already succeeded.
+MNT="$(hdiutil attach "$RW" -nobrowse -noverify | grep -o '/Volumes/.*' | head -1)"
+if [ -z "$MNT" ] || [ ! -d "$MNT" ]; then
+  echo "make-dmg: could not find where the disk image mounted" >&2
+  exit 1
+fi
 
 osascript <<APPLESCRIPT >/dev/null 2>&1 || echo "  (Finder styling skipped — layout will be plain)"
 tell application "Finder"
