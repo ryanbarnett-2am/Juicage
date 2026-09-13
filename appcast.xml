@@ -6,6 +6,15 @@
     <description>Usage meter for claude.ai and local models.</description>
     <language>en</language>
     <item>
+      <title>1.9.1</title>
+      <pubDate>Sun, 13 Sep 2026 14:28:39 +0000</pubDate>
+      <sparkle:version>1.9.1</sparkle:version>
+      <sparkle:shortVersionString>1.9.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://github.com/ryanbarnett-2am/Juicage/releases/tag/v1.9.1</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/ryanbarnett-2am/Juicage/releases/download/v1.9.1/Juicage-1.9.1.zip" sparkle:edSignature="atxGt3pt7oi0bRwI1SbSomCoWQckoxT1+HXIHzxY3UGefPsbQnh3Pex61USmAXvCGs4PP3SzK0lSrRZg+1ZWBw==" length="2124302" type="application/octet-stream"/>
+    </item>
+    <item>
       <title>1.9</title>
       <pubDate>Fri, 11 Sep 2026 03:37:55 +0000</pubDate>
       <sparkle:version>1.9</sparkle:version>
@@ -40,15 +49,6 @@
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
       <sparkle:releaseNotesLink>https://github.com/ryanbarnett-2am/Juicage/releases/tag/v1.8</sparkle:releaseNotesLink>
       <enclosure url="https://github.com/ryanbarnett-2am/Juicage/releases/download/v1.8/Juicage-1.8.zip" sparkle:edSignature="WZbv14gjG1+hi2GxI3LJvH9N/YnaF5GGVBefrhoKYEKBW+UV6tuLxiWg50uNoDKpR/jlDEMOtGGGiQZSSXSsBw==" length="1986374" type="application/octet-stream"/>
-    </item>
-    <item>
-      <title>1.7</title>
-      <pubDate>Thu, 03 Sep 2026 16:46:26 +0000</pubDate>
-      <sparkle:version>1.7</sparkle:version>
-      <sparkle:shortVersionString>1.7</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <sparkle:releaseNotesLink>https://github.com/ryanbarnett-2am/Juicage/releases/tag/v1.7</sparkle:releaseNotesLink>
-      <enclosure url="https://github.com/ryanbarnett-2am/Juicage/releases/download/v1.7/Juicage-1.7.zip" sparkle:edSignature="4V1Lxu3A/0qoxKw74gzbsHFPJu4twM9WbshVxi5Gp0cIPhhGnj6dHVp/2vdjf8LQZM4FQmL3KFOL+oZL8Iu3AA==" length="1948304" type="application/octet-stream"/>
     </item>
   </channel>
 </rss>
