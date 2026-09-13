@@ -94,6 +94,7 @@ final class LocalLLMMonitor: ObservableObject {
     }
 
     private func tick() {
+        lmStudio.ensureTitleStream()
         // Both watchers touch files/subprocesses — keep that off the main thread.
         queue.async { [weak self] in
             guard let self else { return }
@@ -380,6 +381,7 @@ final class LMStudioWatcher {
     private let titleLock = NSLock()
 
     private var streamProcess: Process?
+    private var lastStreamStart: Date?
     private var predictions = 0
 
     // Exact count of generations started since the last call, taken from the
@@ -483,7 +485,17 @@ final class LMStudioWatcher {
         var buffer = ""
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let chunk = handle.availableData
-            guard !chunk.isEmpty, let text = String(data: chunk, encoding: .utf8) else { return }
+            // Empty data means end-of-file: `lms log stream` has exited, usually
+            // because LM Studio restarted. The handler must be removed here.
+            // Left in place it fires again immediately on the closed pipe, gets
+            // nothing, returns, and repeats — a full CPU core indefinitely.
+            // That shipped: 99% CPU for two days on a machine where LM Studio
+            // had restarted once.
+            if chunk.isEmpty {
+                handle.readabilityHandler = nil
+                return
+            }
+            guard let text = String(data: chunk, encoding: .utf8) else { return }
             buffer += text
             // Blocks are separated by the next "timestamp:" line; parse whole
             // lines only and keep the trailing partial for the next chunk.
@@ -494,12 +506,33 @@ final class LMStudioWatcher {
             }
         }
 
+        // Clear our handle on the process when it exits, or the guard at the
+        // top of this function refuses to ever start a replacement and titles
+        // silently stop for the rest of the session.
+        process.terminationHandler = { [weak self] ended in
+            DispatchQueue.main.async {
+                guard let self, self.streamProcess === ended else { return }
+                (ended.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
+                self.streamProcess = nil
+            }
+        }
+
+        lastStreamStart = Date()
         do {
             try process.run()
             streamProcess = process
         } catch {
             streamProcess = nil
         }
+    }
+
+    // Called every tick. Restarts the stream after it has died, but no more
+    // than once every 30 seconds — if `lms` is failing outright, respawning it
+    // every two seconds would be its own CPU problem.
+    func ensureTitleStream() {
+        guard streamProcess == nil else { return }
+        if let last = lastStreamStart, Date().timeIntervalSince(last) < 30 { return }
+        startTitleStream()
     }
 
     func stopTitleStream() {
