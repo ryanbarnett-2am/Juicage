@@ -55,7 +55,7 @@ struct PopoverView: View {
                 }
                 Text(footerText)
                     .font(.caption2)
-                    .foregroundStyle(viewModel.isStale ? Color.orange : Color.secondary.opacity(0.6))
+                    .foregroundStyle(viewModel.isStale ? Color.orange : Color.subtleText)
                 // Refresh sits with "Updated 2 min ago" because that is the
                 // thing it changes.
                 if viewModel.isLoading {
@@ -65,14 +65,14 @@ struct PopoverView: View {
                         Image(systemName: "arrow.clockwise").font(.caption2)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.subtleText)
                     .help("Refresh now")
                 }
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }
                     .font(.caption)
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.subtleText)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -105,7 +105,7 @@ struct PopoverView: View {
                 Image(systemName: "person.crop.circle.badge.exclamationmark")
                     .font(.system(size: 30)).foregroundStyle(.secondary)
                 Text("Sign in to see your usage")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(Color.subtleText)
                 Button("Sign In") {
                     NotificationCenter.default.post(name: .openLogin, object: nil)
                 }
@@ -118,7 +118,7 @@ struct PopoverView: View {
             VStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 26)).foregroundStyle(.secondary)
-                Text("Couldn't load usage").font(.callout).foregroundStyle(.secondary)
+                Text("Couldn't load usage").font(.callout).foregroundStyle(Color.subtleText)
                 Text(err).font(.caption2).foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
             }
@@ -143,7 +143,7 @@ struct PopoverView: View {
     private func infoState(icon: String, text: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icon).font(.system(size: 30)).foregroundStyle(.secondary)
-            Text(text).font(.callout).foregroundStyle(.secondary)
+            Text(text).font(.callout).foregroundStyle(Color.subtleText)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 22)
@@ -172,7 +172,7 @@ struct WorkspaceSection: View {
             if let heading {
                 Text(heading)
                     .font(.subheadline).fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.subtleText)
             }
 
             if let session = workspace.session {
@@ -333,13 +333,13 @@ struct UsageRowView: View {
             if let forecastLine {
                 Text(forecastLine)
                     .font(.caption2)
-                    .foregroundStyle(metric.forecast.isAlerting ? barColor : Color.secondary.opacity(0.7))
+                    .foregroundStyle(metric.forecast.isAlerting ? barColor : Color.subtleText)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let resetLine {
                 Text(resetLine)
                     .font(.caption2)
-                    .foregroundStyle(Color.secondary.opacity(0.7))
+                    .foregroundStyle(Color.subtleText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -358,7 +358,7 @@ struct UsageRowView: View {
                         .frame(height: 18)
                     Text(historyCaption(past))
                         .font(.caption2)
-                        .foregroundStyle(Color.secondary.opacity(0.7))
+                        .foregroundStyle(Color.subtleText)
                         .fixedSize()
                 }
                 .padding(.top, 1)
@@ -399,7 +399,7 @@ struct LocalJobsSection: View {
                     .foregroundStyle(.green)
                 Text(jobs.count > 1 ? "\(jobs.count) local models working" : "Local model working")
                     .font(.caption).fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.subtleText)
                 // A batch fires many short jobs in a row; without a tally it looks
                 // like one job stuck at a few seconds.
                 if completed > 0 {
@@ -454,14 +454,14 @@ struct LocalJobRow: View {
                 if Preferences.shared.showLocalTitles, let title = job.title {
                     Text(title)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.subtleText)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Text(detail)
                     .font(.caption2).monospacedDigit()
-                    .foregroundStyle(Color.secondary.opacity(0.7))
+                    .foregroundStyle(Color.subtleText)
             }
         }
     }
@@ -476,11 +476,11 @@ struct ExtraUsageRow: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("Extra usage").font(.caption).foregroundStyle(.secondary)
+            Text("Extra usage").font(.caption).foregroundStyle(Color.subtleText)
             Spacer()
             if let used {
                 Text(summary(used))
-                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    .font(.caption).foregroundStyle(Color.subtleText).monospacedDigit()
             }
         }
     }

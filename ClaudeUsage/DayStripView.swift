@@ -41,7 +41,7 @@ struct DayStripView: View {
             HStack {
                 Text("Today's sessions")
                     .font(.caption).fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.subtleText)
                 Spacer()
                 Text(DateUtils.clockTime(Date()))
                     .font(.caption2).foregroundStyle(.tertiary)
@@ -111,7 +111,7 @@ struct DayStripView: View {
                 Text(hourLabel(24))
             }
             .font(.caption2)
-            .foregroundStyle(Color.secondary.opacity(0.6))
+            .foregroundStyle(Color.subtleText)
         }
     }
 }
