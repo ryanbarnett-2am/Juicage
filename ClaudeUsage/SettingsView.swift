@@ -100,8 +100,13 @@ struct SettingsView: View {
 
             Section("Local Models") {
                 Toggle("Watch Ollama and LM Studio", isOn: $prefs.watchLocalLLMs)
-                Toggle("Notify when a local job finishes", isOn: $prefs.notifyLocalDone)
-                    .disabled(!prefs.watchLocalLLMs)
+                Picker("Notify when a job finishes", selection: $prefs.localNotifyMinutes) {
+                    Text("Never").tag(0)
+                    Text("If it ran 1 min or more").tag(1)
+                    Text("If it ran 5 min or more").tag(5)
+                    Text("If it ran 15 min or more").tag(15)
+                }
+                .disabled(!prefs.watchLocalLLMs)
                 Toggle("Show what it's working on", isOn: $prefs.showLocalTitles)
                     .disabled(!prefs.watchLocalLLMs)
                 Text("Prompt text is only available from LM Studio — Ollama never records it.")

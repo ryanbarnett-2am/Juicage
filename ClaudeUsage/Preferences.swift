@@ -33,7 +33,10 @@ final class Preferences: ObservableObject {
 
     // Local LLM monitoring (Ollama / LM Studio)
     @Published var watchLocalLLMs: Bool  { didSet { defaults.set(watchLocalLLMs, forKey: "watchLocalLLMs") } }
-    @Published var notifyLocalDone: Bool { didSet { defaults.set(notifyLocalDone, forKey: "notifyLocalDone") } }
+    // Notify when a local run finishes, but only if it lasted at least this many
+    // minutes. 0 = never. Short jobs firing all day made a notification per job;
+    // the point is to hear about work you walked away from.
+    @Published var localNotifyMinutes: Int { didSet { defaults.set(localNotifyMinutes, forKey: "localNotifyMinutes") } }
     // Prompt text is the one genuinely sensitive thing we surface, so it gets its
     // own switch — you can keep the busy indicator without showing what you asked.
     @Published var showLocalTitles: Bool { didSet { defaults.set(showLocalTitles, forKey: "showLocalTitles") } }
@@ -51,7 +54,6 @@ final class Preferences: ObservableObject {
             "menuBarLabelStyle": MenuBarLabelStyle.full.rawValue,
             "showEndTimes": true,
             "watchLocalLLMs": true,
-            "notifyLocalDone": true,
             "showLocalTitles": true,
         ])
         // didSet does not fire during init, so these don't re-write the defaults.
@@ -65,7 +67,9 @@ final class Preferences: ObservableObject {
         menuBarLabelStyle = MenuBarLabelStyle(rawValue: defaults.string(forKey: "menuBarLabelStyle") ?? "") ?? .full
         showEndTimes    = defaults.bool(forKey: "showEndTimes")
         watchLocalLLMs  = defaults.bool(forKey: "watchLocalLLMs")
-        notifyLocalDone = defaults.bool(forKey: "notifyLocalDone")
+        // Carry over the old on/off switch: off stays off, on becomes 1 minute.
+        localNotifyMinutes = defaults.object(forKey: "localNotifyMinutes") as? Int
+            ?? (defaults.object(forKey: "notifyLocalDone") as? Bool == false ? 0 : 1)
         showLocalTitles = defaults.bool(forKey: "showLocalTitles")
     }
 

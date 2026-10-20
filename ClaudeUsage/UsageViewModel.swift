@@ -63,7 +63,8 @@ class UsageViewModel: ObservableObject {
         // Nothing here touches self — both collaborators are singletons — so no
         // capture is needed and there's no retain cycle to guard against.
         localMonitor.onRunFinished = { run in
-            guard Preferences.shared.notifyLocalDone else { return }
+            let minutes = Preferences.shared.localNotifyMinutes
+            guard minutes > 0, run.duration >= Double(minutes * 60) else { return }
             NotificationManager.shared.localRunFinished(run)
         }
         localMonitor.$jobs
