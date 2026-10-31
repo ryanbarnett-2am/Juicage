@@ -50,9 +50,10 @@ Requires **macOS 13 (Ventura) or later**. Universal (Apple Silicon and Intel).
 
 ### Claude.ai usage
 
-- **Menu bar rings** — two concentric rings: outer is the current session, inner
-  is the weekly cap. Each is colored **independently**, so a healthy session
-  alongside a maxed-out week reads as neutral + red instead of both going red.
+- **Menu bar rings** — up to three concentric rings, one per limit you choose in
+  Preferences. Each is colored **independently**, so a healthy session alongside
+  a maxed-out week reads as neutral + red instead of both going red. If your plan
+  stops reporting a limit, the next one takes its ring.
 - **Three color tiers** — blue (on pace) → orange (getting close) → red (over
   pace, or very high), so there's a heads-up rather than a jump straight to red.
 - **Pick what the menu bar counts** — the percentages beside the ring show the
@@ -84,9 +85,9 @@ Requires **macOS 13 (Ventura) or later**. Universal (Apple Silicon and Intel).
   maxed out draw red, and the caption says which question it's answering:
   "last 8 · maxed 3×" or "last 11 · ~83% unused". Recorded locally; nothing
   leaves your Mac.
-- **Service status** — during a claude.ai outage the rings give way to a
-  red/orange dot and a banner naming the issue.
-- **Rings-only mode** — turn off *Show text in menu bar* in Preferences and just
+- **Service status** — during a claude.ai outage a red or orange badge appears on
+  the rings, and a banner in the popover names the issue. Your usage stays visible.
+- **Rings-only mode** — turn off *Show percentages next to the ring* in Preferences and just
   the rings remain, for anyone short on menu bar space (notched Macs especially).
 - **Follows your region's time format** — 12-hour with AM/PM or 24-hour,
   according to your macOS setting rather than a hardcoded style.
@@ -96,7 +97,8 @@ Requires **macOS 13 (Ventura) or later**. Universal (Apple Silicon and Intel).
 - A **green dot** in the menu bar while a local model is actively generating,
   and a popover row with the model, engine, elapsed time, and — for Ollama —
   tokens per second.
-- A **notification when a job finishes**. With local models that's usually the
+- A **notification when a job finishes**, if it ran long enough to matter — you
+  choose the length, from 1 to 15 minutes, or turn it off. With local models that's usually the
   moment that matters: you start a long generation and walk away.
 - For LM Studio, the prompt is shown as a **task title** so you can tell which
   job is running. Ollama never records prompt text, so it shows the model name.
