@@ -64,6 +64,10 @@ final class UsageFetcher: NSObject, WKNavigationDelegate, WKScriptMessageHandler
         offscreenWindow.contentView = webView
         offscreenWindow.alphaValue = 0
         offscreenWindow.ignoresMouseEvents = true
+        // Keep it out of Mission Control. From macOS 27, a normal-level window
+        // parked this far off every display breaks Mission Control's layout:
+        // swipe up and no windows are shown for any app until Juicage quits.
+        offscreenWindow.collectionBehavior = .transient
         offscreenWindow.orderBack(nil)
 
         super.init()
