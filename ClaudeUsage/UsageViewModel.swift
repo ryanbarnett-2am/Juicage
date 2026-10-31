@@ -267,22 +267,22 @@ class UsageViewModel: ObservableObject {
 
     // MARK: - Menu bar helpers
 
-    // The outer ring shows the highest session usage across workspaces…
-    var ringPercent: Int? {
-        workspaces.compactMap { $0.session?.percent }.max()
-    }
-
-    // …and the inner ring shows the highest weekly (all models) usage.
-    var weeklyRingPercent: Int? {
-        workspaces.compactMap { $0.weeklyAll?.percent }.max()
-    }
-
     // Every limit currently reported, de-duplicated across workspaces and in the
     // order the popover draws them: the menu of what the menu bar can be told to
     // show. Per-model caps appear here as soon as the account has one.
     var menuBarChoices: [UsageMetric] {
         var seen = Set<String>()
         return workspaces.flatMap(\.allMetrics).filter { seen.insert($0.key).inserted }
+    }
+
+    // The picks actually in effect — see MenuBarTitle.effectiveKeys.
+    var ringKeys: [String] {
+        MenuBarTitle.effectiveKeys(picked: Preferences.shared.menuBarRings,
+                                   reported: menuBarChoices.map(\.key))
+    }
+    var textKeys: [String] {
+        MenuBarTitle.effectiveKeys(picked: Preferences.shared.menuBarMetrics,
+                                   reported: menuBarChoices.map(\.key))
     }
 
     // The rings to draw, outermost first.
@@ -293,7 +293,7 @@ class UsageViewModel: ObservableObject {
     // shuffling the others. Worst severity across workspaces, matching the
     // numbers the popover shows.
     var menuBarRings: [ProgressRingImage.Ring] {
-        let wanted = Set(Preferences.shared.menuBarRings)
+        let wanted = Set(ringKeys)
         return menuBarChoices
             .filter { wanted.contains($0.key) }
             .prefix(3)
@@ -310,18 +310,6 @@ class UsageViewModel: ObservableObject {
     // True if any limit anywhere is on pace to hit its cap — drives the ⚠ text.
     var isAnyAlerting: Bool {
         workspaces.contains { ws in ws.allMetrics.contains { $0.forecast.isAlerting } }
-    }
-
-    // Per-ring severity, so the outer (session) and inner (weekly) rings color
-    // independently (and get the orange middle tier), instead of both jumping to
-    // red when only one is in trouble. Takes the worst across workspaces.
-    var sessionSeverity: Severity {
-        workspaces.compactMap { $0.session }
-            .map { severity(percent: $0.percent, forecast: $0.forecast) }.max() ?? .ok
-    }
-    var weeklySeverity: Severity {
-        workspaces.compactMap { $0.weeklyAll }
-            .map { severity(percent: $0.percent, forecast: $0.forecast) }.max() ?? .ok
     }
 
     var lastUpdated: Date? {

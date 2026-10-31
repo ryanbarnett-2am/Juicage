@@ -149,7 +149,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         let alert = viewModel.isAnyAlerting
         let title = MenuBarTitle.make(workspaces: viewModel.workspaces,
-                                      keys: Preferences.shared.menuBarMetrics,
+                                      keys: viewModel.textKeys,
                                       labels: Preferences.shared.menuBarLabelStyle,
                                       showEndTimes: Preferences.shared.showEndTimes)
 
@@ -403,6 +403,18 @@ extension Notification.Name {
 // Builds the text beside the ring from whichever limits you picked in
 // Preferences. Pure, so the self-test below can check it without a menu bar.
 enum MenuBarTitle {
+    // What to show for a set of picks. A picked limit that's no longer reported
+    // hands its place to the next limit down, so a plan change can't quietly cost
+    // a ring: the Ultra plan dropping the 5-hour session left one ring, and no
+    // percentage at all on the default settings. If the limit comes back it takes
+    // its place back. Keyed on every account's limits, so one account losing a
+    // limit changes nothing while another still has it.
+    static func effectiveKeys(picked: [String], reported: [String]) -> [String] {
+        let vacant = Set(picked).subtracting(reported).count
+        return reported.filter(picked.contains)
+            + reported.filter { !picked.contains($0) }.prefix(vacant)
+    }
+
     static func make(workspaces: [WorkspaceUsage], keys: [String],
                      labels: MenuBarLabelStyle, showEndTimes: Bool,
                      now: Date = Date()) -> String {
@@ -483,6 +495,18 @@ enum MenuBarTitle {
         check("two accounts", ["session"], [ws, other], " 42% · 88% · 2h0m")
         check("account missing the limit", ["weekly_all"], [ws, other], " 71% · —")
         check("no data yet", ["session"], [], " …")
+
+        func checkKeys(_ what: String, _ picked: [String], _ reported: [String], _ want: [String]) {
+            let got = effectiveKeys(picked: picked, reported: reported)
+            if got.sorted() != want.sorted() { problems.append("\(what): expected \(want), got \(got)") }
+        }
+        let ultra = ["weekly_all", "weekly_scoped:Fable"]
+        checkKeys("a gone limit passes its slot on", ["session", "weekly_scoped:Fable"], ultra, ultra)
+        checkKeys("default rings without a session", ["session", "weekly_all"], ultra, ultra)
+        checkKeys("default text without a session", ["session"], ultra, ["weekly_all"])
+        checkKeys("everything still reported", ["session"], ["session", "weekly_all"], ["session"])
+        checkKeys("nothing picked stays nothing", [], ultra, [])
+        checkKeys("no data yet", ["session"], [], [])
 
         if problems.isEmpty {
             dlog("menu bar title self-test PASSED ✓")

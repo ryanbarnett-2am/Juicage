@@ -15,24 +15,28 @@ struct SettingsView: View {
     // Ticking one of the menu bar rings on or off. Three is the ceiling: a
     // fourth ring has too little circumference left to read as an arc rather
     // than a dot.
+    //
+    // Both this and shown(_:) read and write the picks in effect, not the stored
+    // ones. A box ticked on someone's behalf has to look ticked, and unticking it
+    // has to stick — which means saving what's on screen, not the stale list.
     private func ringed(_ key: String) -> Binding<Bool> {
-        Binding(get: { prefs.menuBarRings.contains(key) },
+        Binding(get: { viewModel.ringKeys.contains(key) },
                 set: { on in
-                    var keys = prefs.menuBarRings.filter { $0 != key }
+                    var keys = viewModel.ringKeys.filter { $0 != key }
                     if on { keys.append(key) }
                     prefs.menuBarRings = keys
                 })
     }
 
-    private var ringLimitReached: Bool { prefs.menuBarRings.count >= 3 }
+    private var ringLimitReached: Bool { viewModel.ringKeys.count >= 3 }
 
     // Ticking one of the menu bar limits on or off. Stored as a list of metric
     // keys rather than a fixed set of switches, so a cap we've never heard of
     // still gets a working checkbox the day the account grows one.
     private func shown(_ key: String) -> Binding<Bool> {
-        Binding(get: { prefs.menuBarMetrics.contains(key) },
+        Binding(get: { viewModel.textKeys.contains(key) },
                 set: { on in
-                    var keys = prefs.menuBarMetrics.filter { $0 != key }
+                    var keys = viewModel.textKeys.filter { $0 != key }
                     if on { keys.append(key) }
                     prefs.menuBarMetrics = keys
                 })
@@ -61,7 +65,7 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(viewModel.menuBarChoices) { metric in
                     Toggle(metric.label, isOn: ringed(metric.key))
-                        .disabled(ringLimitReached && !prefs.menuBarRings.contains(metric.key))
+                        .disabled(ringLimitReached && !viewModel.ringKeys.contains(metric.key))
                         .padding(.leading, 18)
                 }
                 if ringLimitReached {

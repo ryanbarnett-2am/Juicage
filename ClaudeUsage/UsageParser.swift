@@ -33,7 +33,7 @@ enum UsageParser {
                         UsageMetric(key: "weekly_scoped:\(name)", label: name,
                                     percent: percent, resetAt: resetAt))
                 default:
-                    break
+                    dlog("unknown limit kind: \(kind) at \(percent)%")
                 }
             }
         }
